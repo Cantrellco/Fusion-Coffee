@@ -1,0 +1,205 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Fusion Coffee — design system base
+   Warm. Natural. Modern. Editorial.
+   ============================================================ */
+
+:root {
+  --cream: #f3ede2;
+  --cream-deep: #eae0d0;
+  --latte: #e6d8c3;
+  --oak: #d6b187;
+  --brick: #b24e34;
+  --terracotta: #d07a53;
+  --sage: #7a8f73;
+  --olive: #5c6b55;
+  --concrete: #c8c3bb;
+  --ink: #1e1e1e;
+  --espresso: #171411;
+  --brick-deep: #a3442d;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--cream);
+    color: var(--ink);
+    font-feature-settings: 'ss01', 'cv05';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: var(--brick);
+    color: var(--cream);
+  }
+
+  /* Visible, on-brand keyboard focus */
+  :focus-visible {
+    outline: 2px solid var(--brick);
+    outline-offset: 3px;
+    border-radius: 1px;
+  }
+
+  /* Custom scrollbar (progressive enhancement) */
+  ::-webkit-scrollbar {
+    width: 11px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--cream-deep);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #c4b69d;
+    border: 3px solid var(--cream-deep);
+    border-radius: 0;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--oak);
+  }
+}
+
+@layer components {
+  /* The real neon: white-on-black logo blended onto dark surfaces so the
+     black backing vanishes and only the glowing tube shows. Logo file is
+     never altered. */
+  /* Logo is now a true-transparent PNG (alpha extracted from the neon), so it
+     needs no blend mode — it sits cleanly on any dark surface. A faint glow
+     adds a touch of pop on top of the baked-in halo. */
+  .neon-logo {
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.18));
+  }
+
+  /* Letterspaced editorial eyebrow label */
+  .eyebrow {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.28em;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  /* Brick is brand-correct as a fill/icon, but as small eyebrow TEXT on a light
+     surface it lands at 4.47:1 (just under AA). Nudge eyebrow brick darker. */
+  .eyebrow.text-brick {
+    color: var(--brick-deep);
+  }
+
+  /* Thin rule that fades — used as section dividers */
+  .hairline {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(30, 30, 30, 0.22) 12%,
+      rgba(30, 30, 30, 0.22) 88%,
+      transparent
+    );
+  }
+
+  /* Animated link underline */
+  .link-underline {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-position: 0% 100%;
+    background-repeat: no-repeat;
+    background-size: 0% 1px;
+    transition: background-size 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .link-underline:hover {
+    background-size: 100% 1px;
+  }
+
+  /* The wood-dowel menu board motif from the shop wall */
+  .dowel-row {
+    position: relative;
+  }
+  .dowel-row::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, #e6c79b, #c79a64 60%, #a87b48);
+    box-shadow: 0 1px 2px rgba(120, 80, 40, 0.25);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Subtle paper grain to keep large cream fields from feeling flat */
+  .grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.5;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.32'/%3E%3C/svg%3E");
+  }
+
+  .duotone-warm {
+    filter: sepia(0.18) saturate(1.05) contrast(1.02);
+  }
+
+  /* Editorial scroll reveal. Default is VISIBLE so the page is fully readable
+     with JS disabled. The inline boot script adds `.js` to <html> before paint;
+     only then do we hide-then-reveal as elements enter the viewport. This keeps
+     server and first client render identical (no hydration mismatch). */
+  .reveal {
+    transition:
+      opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
+  }
+  .js .reveal {
+    opacity: 0;
+    transform: translateY(var(--reveal-y, 24px));
+  }
+  .js .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Respect reduced motion globally */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .js .reveal,
+  .js .reveal.is-visible {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
