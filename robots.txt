@@ -1,0 +1,5 @@
+User-Agent: *
+Allow: /
+
+Host: https://www.fusioncoffeeshop.com
+Sitemap: https://www.fusioncoffeeshop.com/sitemap.xml
