@@ -83,11 +83,44 @@
     filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.18));
   }
 
+  /* Apple-style translucent DARK glass for the floating nav pill.
+     Tailwind can't cleanly express the saturate() backdrop, the layered
+     vertical fill gradient, and the hairline lit top edge together, so it
+     lives here. The fill floor is 0.80 espresso (gradient 0.86 -> 0.80):
+     even over a LIGHT cream section the composited surface stays a dark
+     charcoal (~rgb(67,63,59)), so cream nav text clears AA (8.95:1, and
+     5.88:1 for the dimmed cream/75 links). Over the dark hero it's darker
+     still. The inset highlight is the lit top edge; the inset dark shadow
+     adds glass depth without lowering the fill opacity. */
+  .glass-dark {
+    background-image: linear-gradient(
+      to bottom,
+      rgba(20, 17, 14, 0.86),
+      rgba(20, 17, 14, 0.8)
+    );
+    -webkit-backdrop-filter: blur(16px) saturate(135%);
+    backdrop-filter: blur(16px) saturate(135%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+  }
+  /* No backdrop-filter (older Safari/Firefox): go near-opaque so the dark
+     surface — and the cream-text contrast — never depends on the blur. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass-dark {
+      background-image: linear-gradient(
+        to bottom,
+        rgba(20, 17, 14, 0.95),
+        rgba(20, 17, 14, 0.92)
+      );
+    }
+  }
+
   /* Letterspaced editorial eyebrow label */
   .eyebrow {
     font-family: var(--font-sans), system-ui, sans-serif;
     text-transform: uppercase;
-    letter-spacing: 0.28em;
+    letter-spacing: theme('letterSpacing.mega'); /* single source of truth */
     font-size: 0.72rem;
     font-weight: 600;
   }
@@ -106,6 +139,18 @@
       transparent,
       rgba(30, 30, 30, 0.22) 12%,
       rgba(30, 30, 30, 0.22) 88%,
+      transparent
+    );
+  }
+
+  /* Sage-tinted divider — the greenery counterpart to .hairline */
+  .hairline-sage {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(122, 143, 115, 0.4) 12%,
+      rgba(122, 143, 115, 0.4) 88%,
       transparent
     );
   }
@@ -137,6 +182,161 @@
     background: linear-gradient(to bottom, #e6c79b, #c79a64 60%, #a87b48);
     box-shadow: 0 1px 2px rgba(120, 80, 40, 0.25);
   }
+
+  /* ============================================================
+     Summer Menu — seasonal section treatment. Warm one-corner
+     "summer light" + framed specimen cards. Pure decoration:
+     never touches text contrast (readable text stays ink /
+     ink-muted / brick-deep, so AA holds on cream-deep).
+     ============================================================ */
+
+  /* Directional low-sun rake. One light source, one diagonal: an oak core
+     parked off-canvas top-right (softened 0.30 -> 0.24 so the right-aligned
+     intro copy actually GAINS AA headroom), a tight terracotta hotspot pulled
+     into the EMPTY top-right corner (hotter at the source, less tint behind
+     text), and a whisper-faint oak floor bottom-left so the falloff reaches
+     the eucalyptus corner instead of dying on flat cream-deep. Pure decoration
+     behind z-0. ::after so it coexists with grain-soft's ::before on the same
+     section element. */
+  .summer-sun::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(96% 78% at 90% -8%, rgba(214, 177, 135, 0.24), transparent 56%),
+      radial-gradient(46% 40% at 100% -4%, rgba(208, 122, 83, 0.15), transparent 46%),
+      radial-gradient(78% 64% at 4% 108%, rgba(214, 177, 135, 0.07), transparent 56%);
+  }
+
+  /* Specimen card — a fine hairline frame on a barely-warm panel.
+     The core "premium, not bland" lift over flat text rows. */
+  .summer-card {
+    background: linear-gradient(
+      180deg,
+      rgba(243, 237, 226, 0.55),
+      rgba(230, 216, 195, 0.32)
+    );
+    border: 1px solid rgba(30, 30, 30, 0.12);
+    transition:
+      border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .summer-card:hover {
+    border-color: rgba(214, 177, 135, 0.6); /* oak */
+    transform: translateY(-2px);
+    box-shadow: 0 14px 34px -22px rgba(120, 80, 40, 0.5); /* warm, not gray */
+  }
+
+  /* Warm top rule — sage at rest, wiping to citrus terracotta on
+     hover. Seasonal echo of the wood-dowel motif. The card's own
+     1px frame is the rest separator, so nothing is hidden when
+     hover/animation is unavailable. */
+  .summer-rule {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background: linear-gradient(to right, var(--sage), var(--terracotta));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .summer-card:hover .summer-rule {
+    transform: scaleX(1);
+  }
+
+  /* ============================================================
+     Interior page hero — editorial depth on cream WITHOUT a photo
+     (the photo-background hero stays home-only). Pure decoration:
+     washes/letterform sit behind z-10 content, never touch contrast.
+     ============================================================ */
+
+  /* Faint warm "low sun" wash for the interior PageHero. ::after so it
+     coexists with grain-soft's ::before on the same section. Anchored
+     top-left so it never fights the top-right corner botanical; lighter
+     than .summer-sun because the surface is cream, not cream-deep. */
+  .hero-wash::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(110% 80% at 8% -12%, rgba(214, 177, 135, 0.2), transparent 56%),
+      radial-gradient(80% 60% at 0% 0%, rgba(208, 122, 83, 0.07), transparent 50%);
+  }
+
+  /* Warm "pooled light" for flat espresso/dark sections. grain-soft uses
+     mix-blend:multiply and is invisible on near-black, so dark bands read flat;
+     this adds a very faint warm radial anchored to the corner that holds the
+     CornerBotanical, so light pools behind decoration — never behind the cream
+     copy, keeping the documented AA margins. Far lighter than the cream washes;
+     the eye reads warmth on dark at a fraction of the intensity. ::after so it
+     coexists with any ::before. Position presets per corner. */
+  .espresso-wash::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(110% 80% at 88% -10%, rgba(214, 177, 135, 0.06), transparent 55%),
+      radial-gradient(70% 60% at 100% 0%, rgba(178, 78, 52, 0.05), transparent 50%);
+  }
+  .espresso-wash.wash-tl::after {
+    background:
+      radial-gradient(110% 80% at 12% -10%, rgba(214, 177, 135, 0.06), transparent 55%),
+      radial-gradient(70% 60% at 0% 0%, rgba(178, 78, 52, 0.05), transparent 50%);
+  }
+  .espresso-wash.wash-bl::after {
+    background:
+      radial-gradient(110% 80% at 12% 110%, rgba(214, 177, 135, 0.06), transparent 55%),
+      radial-gradient(70% 60% at 0% 100%, rgba(178, 78, 52, 0.05), transparent 50%);
+  }
+  .espresso-wash.wash-br::after {
+    background:
+      radial-gradient(110% 80% at 88% 110%, rgba(214, 177, 135, 0.06), transparent 55%),
+      radial-gradient(70% 60% at 100% 100%, rgba(178, 78, 52, 0.05), transparent 50%);
+  }
+
+  /* Hero accent rule: the left hairline draws in as the hero reveals.
+     Default scaleX(1) so no-JS / SSR / first paint show it fully drawn;
+     only .js collapses-then-wipes, keyed off the Reveal cascade. */
+  .hero-rule-line {
+    transform-origin: left;
+    transform: scaleX(1);
+  }
+  .js .hero-rule-line {
+    transform: scaleX(0);
+    transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: 0.3s;
+  }
+  .js .reveal.is-visible .hero-rule-line {
+    transform: scaleX(1);
+  }
+
+  /* Menu price row: a thin wood-dowel rule wipes in on hover, echoing the
+     shop's physical menu board. The row's own border-b is the permanent
+     separator, so nothing is hidden at rest (same pattern as .summer-rule). */
+  .price-row::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -1px;
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(to right, #e6c79b, #c79a64 60%, #a87b48);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .price-row:hover::after {
+    transform: scaleX(1);
+  }
 }
 
 @layer utilities {
@@ -157,6 +357,19 @@
     opacity: 0.5;
     mix-blend-mode: multiply;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.32'/%3E%3C/svg%3E");
+  }
+
+  /* Softer paper grain for large cream fields — keeps texture subtle so
+     headlines and body copy stay crisp. */
+  .grain-soft::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.32;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.18'/%3E%3C/svg%3E");
   }
 
   .duotone-warm {
@@ -200,6 +413,27 @@
   .js .reveal.is-visible {
     opacity: 1 !important;
     transform: none !important;
+    transition: none !important;
+  }
+  /* Show the seasonal accent rule statically (it must not stay collapsed
+     at scaleX(0) when its hover transition is disabled). */
+  .summer-rule {
+    transform: scaleX(1);
+  }
+  .summer-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  /* Show the hero accent rule statically when its draw-in is disabled
+     (the global clamp zeroes duration but not the scaleX start-state). */
+  .js .hero-rule-line {
+    transform: scaleX(1) !important;
+    transition: none !important;
+  }
+  /* Keep the price-row dowel wipe collapsed (the border-b is the visible
+     separator, so the row is never blank). */
+  .price-row::after {
+    transform: scaleX(0);
     transition: none !important;
   }
 }

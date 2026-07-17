@@ -9,6 +9,14 @@ export const site = {
   tagline: 'Skip the line.',
   shortPitch: 'A curated coffee experience in the heart of downtown Fairfield.',
   city: 'Fairfield, Illinois',
+  // The shop opened in 2022 (ESTD 2022 on the merch). Used in the hero eyebrow
+  // and the LocalBusiness structured data.
+  established: 2022,
+  // Coffee + light bites — the $$ band Google expects on the local panel.
+  priceRange: '$$',
+  // IANA zone — every "open now" calculation is done in the shop's own time,
+  // never the visitor's browser locale.
+  timezone: 'America/Chicago',
 
   address: {
     street: '207 East Main Street',
@@ -21,19 +29,22 @@ export const site = {
   geo: { lat: 38.37978, lng: -88.35849 },
 
   email: 'fusioncoffeellc@gmail.com',
-  phone: null as string | null,
+  // Verified against the shop's live Google/Yelp listings (June 2026).
+  phone: '(618) 599-1678' as string | null,
+  phoneHref: 'tel:+16185991678',
 
-  // Mon–Sat 6:00 AM – 6:00 PM, Sunday closed (from the original site).
+  // Mon–Fri 6:00 AM – 6:00 PM, Sat 6:00 AM – 4:00 PM, Sunday closed.
+  // Verified against the shop's live Google/Yelp listings (June 2026).
   hours: [
     { day: 'Monday', short: 'Mon', open: '6:00 AM', close: '6:00 PM' },
     { day: 'Tuesday', short: 'Tue', open: '6:00 AM', close: '6:00 PM' },
     { day: 'Wednesday', short: 'Wed', open: '6:00 AM', close: '6:00 PM' },
     { day: 'Thursday', short: 'Thu', open: '6:00 AM', close: '6:00 PM' },
     { day: 'Friday', short: 'Fri', open: '6:00 AM', close: '6:00 PM' },
-    { day: 'Saturday', short: 'Sat', open: '6:00 AM', close: '6:00 PM' },
+    { day: 'Saturday', short: 'Sat', open: '6:00 AM', close: '4:00 PM' },
     { day: 'Sunday', short: 'Sun', open: null, close: null },
   ] as { day: string; short: string; open: string | null; close: string | null }[],
-  hoursSummary: 'Mon–Sat · 6am – 6pm',
+  hoursSummary: 'Mon–Fri 6am–6pm · Sat 6am–4pm',
 
   social: {
     instagram: { handle: '@fusioncoffee_', url: 'https://www.instagram.com/fusioncoffee_/' },
@@ -41,22 +52,35 @@ export const site = {
     email: 'fusioncoffeellc@gmail.com',
   },
 
-  // NOTE: interim destination for "Order Now" — points at the existing Square
-  // online ordering. Swap this single value when the full ordering experience
-  // is wired up.
-  orderUrl: 'https://www.fusioncoffeeshop.com/',
+  // Destination for every "Order now" CTA — the live Square online-order
+  // surface (verified 200; the store root and /order are a click short / 404).
+  // Swap this single value if the ordering experience ever moves.
+  orderUrl: 'https://www.fusioncoffeeshop.com/s/order',
+
+  // Owned-channel signup. Paste the shop's Square Marketing (or Mailchimp)
+  // hosted form action here to POST subscribers straight in; while it's empty
+  // the inline form gracefully falls back to a pre-filled email to the shop.
+  newsletterAction: '' as string,
+
+  // Private party booking requests. Paste a hosted form endpoint (Square,
+  // Formspree, etc.) to POST requests straight in; while it's empty the /party
+  // form gracefully falls back to a pre-filled email to the shop, so the
+  // control always works on the static export.
+  bookingAction: '' as string,
 
   // Verbatim brand story from the original site.
   about:
     'Fusion Coffee provides a curated coffee experience in the heart of Downtown Fairfield, Illinois. Our process fuses our expansive knowledge of coffee and fine ingredients to create one of a kind products in a modern, welcoming space. At Fusion Coffee, we hope you will find more than just a coffee shop, but a space to be connected to friends, family and community.',
 };
 
+// "Order" is intentionally not a nav item — the always-visible "Order now"
+// button (header + hero) routes straight to the live ordering experience.
 export const nav = [
   { label: 'Home', href: '/' },
   { label: 'Menu', href: '/menu/' },
-  { label: 'Order', href: '/order/' },
   { label: 'About', href: '/about/' },
-  { label: 'Merch', href: '/merch/' },
+  { label: 'Shop', href: '/merch/' },
+  { label: 'Parties', href: '/party/' },
   { label: 'Contact', href: '/contact/' },
 ];
 
@@ -73,6 +97,221 @@ export const drinkBoard = [
   'Matcha',
   'Tea',
 ];
+
+// ============================================================
+// Private party bookings — reserve the shop for a group outside
+// regular service. The windows below are the single source of
+// truth for the /party page and the booking request form. Bookings
+// are by request (the shop confirms details), not instant: the
+// form emails the shop until a hosted endpoint (site.bookingAction)
+// is wired in. Intentionally free of invented policy (no minimums,
+// deposits or pricing) — those are settled in the follow-up.
+// ============================================================
+export type BookingSlot = { day: string; short: string; start: string; end: string };
+
+export const partyBooking: {
+  eyebrow: string;
+  title: string;
+  intro: string;
+  slots: BookingSlot[];
+  includes: { title: string; body: string }[];
+} = {
+  eyebrow: 'Private bookings',
+  title: 'Book the shop for your party.',
+  intro:
+    'Birthdays, showers, team mornings and small celebrations — reserve a window and we’ll open the space just for your group, with drinks and bites made to order.',
+  // Hosted windows: Saturday afternoon (after regular service) and two Sunday
+  // blocks (the shop is otherwise closed Sundays).
+  slots: [
+    { day: 'Saturday', short: 'Sat', start: '3:00 PM', end: '5:00 PM' },
+    { day: 'Sunday', short: 'Sun', start: '12:00 PM', end: '2:00 PM' },
+    { day: 'Sunday', short: 'Sun', start: '2:00 PM', end: '4:00 PM' },
+  ],
+  includes: [
+    {
+      title: 'The whole space',
+      body: 'The café is yours for the window — exposed brick, trailing greenery and the glow of the neon, set for your group.',
+    },
+    {
+      title: 'Made to order',
+      body: 'A full bar of espresso, matcha and seasonal drinks, plus bowls and bites, prepared fresh for everyone through your booking.',
+    },
+    {
+      title: 'Simple to plan',
+      body: 'Send the date, headcount and the occasion. We’ll follow up to confirm the details and take care of the rest.',
+    },
+  ],
+};
+
+// ============================================================
+// Summer Menu — seasonal, limited-time. Featured on the home
+// page directly under the hero. Names + descriptions only
+// (no prices), in keeping with the rest of the site.
+// Source photo: /Fusion Images/menu-summer.jpeg.
+// ============================================================
+export type SummerItem = { name: string; blurb: string };
+export type SummerGroup = { heading: string; items: SummerItem[] };
+
+export const summerMenu: {
+  eyebrow: string;
+  title: string;
+  intro: string;
+  groups: SummerGroup[];
+} = {
+  eyebrow: 'Limited time',
+  title: 'The Summer Menu is on.',
+  intro:
+    'Seasonal lattes, fresh-squeezed lemonades and a couple of sweet bites — here while the sun is.',
+  groups: [
+    {
+      heading: 'Drinks',
+      items: [
+        {
+          name: 'Blueberry Latte',
+          blurb:
+            'House-made blueberry syrup + milk of choice, topped with espresso or matcha.',
+        },
+        {
+          name: 'Banana Pudding Latte',
+          blurb:
+            'House-made banana syrup + milk of choice + espresso, finished with banana cold foam and wafer crumble.',
+        },
+        {
+          name: 'Root Beer Float Flash Brew',
+          blurb:
+            'House-made root beer reduction + flash brew, topped with a vanilla cream float.',
+        },
+        {
+          name: 'Cereal Milk Latte',
+          blurb: 'Fruity Pebbles–infused oat milk + espresso.',
+        },
+        {
+          name: 'Piña Colada Lemonade',
+          blurb:
+            'Fresh-squeezed lemonade mixed with a house-made coconut pineapple syrup.',
+        },
+        {
+          name: 'Dragon Fruit Lemonade',
+          blurb:
+            'Fresh-squeezed lemonade mixed with a house-made dragon fruit coconut syrup.',
+        },
+      ],
+    },
+    {
+      heading: 'Food',
+      items: [
+        {
+          name: 'Peach Cobbler Yogurt Bowl',
+          blurb:
+            'Honey Greek yogurt + house-made brown sugar cinnamon peaches + house-made streusel topping.',
+        },
+        {
+          name: 'Summer Affogato',
+          blurb:
+            'Vanilla ice cream topped with “Feels Like Summer” blend espresso, roasted by Methodical Coffee.',
+        },
+      ],
+    },
+  ],
+};
+
+// ============================================================
+// Regular menu — transcribed from the laminated in-shop menus.
+// Source photos kept in /Fusion Images: menu-main-priced.jpeg
+// (coffee, non-coffee, tea, flavors, eats, sandwiches, breakfast)
+// and menu-breakfast-sandwiches.jpeg (sandwich descriptions).
+// Verified against those photos. Flavors are add-ons (no
+// individual price). Breakfast sandwiches are served 6–11am.
+// ============================================================
+export type PricedItem = { name: string; price: string };
+export type BreakfastSandwich = { name: string; price: string; description: string };
+export type MenuGroup = { heading: string; items: PricedItem[] };
+
+export const regularMenu: {
+  drinks: MenuGroup[];
+  flavors: string[];
+  breakfastSandwiches: { note: string; items: BreakfastSandwich[] };
+  eats: PricedItem[];
+  sandwiches: PricedItem[];
+} = {
+  drinks: [
+    {
+      heading: 'Coffee',
+      items: [
+        { name: 'Espresso', price: '$3.00' },
+        { name: 'Single Origin', price: '$4.00' },
+        { name: 'Cortado', price: '$4.50' },
+        { name: 'Cappuccino', price: '$5.00' },
+        { name: 'Latte', price: '$5.50' },
+        { name: 'Cold Brew', price: '$5.50' },
+        { name: 'Americano', price: '$4.00' },
+        { name: 'Drip', price: '$4.00' },
+        { name: 'Pour Over', price: '$5.50' },
+      ],
+    },
+    {
+      heading: 'Non-Coffee',
+      items: [
+        { name: 'Matcha', price: '$5.50' },
+        { name: 'Chai', price: '$5.00' },
+        { name: 'Blueberry Basil Lemonade', price: '$4.00' },
+        { name: 'Strawberry Lemonade', price: '$4.00' },
+        { name: 'Hot Chocolate', price: '$4.00' },
+        { name: 'Milk', price: '$2.50' },
+      ],
+    },
+    {
+      heading: 'Tea',
+      items: [
+        { name: 'Jasmine Peach', price: '$4.50' },
+        { name: 'Blend 333', price: '$4.50' },
+        { name: 'English Breakfast', price: '$4.50' },
+        { name: 'Earl Grey', price: '$4.50' },
+        { name: 'King Crimson', price: '$4.50' },
+      ],
+    },
+  ],
+
+  // Add to any drink.
+  flavors: ['Caramel', 'Cuban', 'Vanilla', 'Maple', 'Mocha', 'Brown Sugar (SF)', 'Honey Cinnamon'],
+
+  breakfastSandwiches: {
+    note: 'Served 6–11am',
+    items: [
+      {
+        name: 'The Bee Sting',
+        price: '$10.00',
+        description:
+          'Cheddar bagel, sriracha, cream cheese, bacon, egg, colby jack cheese, hot honey drizzle.',
+      },
+      {
+        name: 'The Fresh Garden',
+        price: '$10.00',
+        description:
+          'Cheddar bagel, herbed cream cheese, egg, smoked gouda, avocado, tomato, arugula.',
+      },
+      {
+        name: 'The Classic',
+        price: '$10.00',
+        description: 'Cheddar bagel, bacon, egg, colby jack cheese.',
+      },
+    ],
+  },
+
+  eats: [
+    { name: 'Açaí Bowl OG', price: '$10.50' },
+    { name: 'Açaí Bowl Pro', price: '$10.50' },
+    { name: 'Avocado Toast', price: '$9.00' },
+    { name: 'Yogurt Bowl', price: '$7.50' },
+  ],
+
+  sandwiches: [
+    { name: 'Chipotle Chicken', price: '$11.00' },
+    { name: 'B.L.T.', price: '$11.00' },
+    { name: 'Turkey Pesto', price: '$11.00' },
+    { name: '3-Cheese Grilled Cheese', price: '$10.00' },
+  ],
+};
 
 export type Signature = {
   name: string;
@@ -135,13 +374,206 @@ export const signatures: Signature[] = [
   },
 ];
 
+// ============================================================
+// Merch — real, in-stock goods pulled from the shop's own online
+// store (fusioncoffeeshop.com / Square). Names, photos and details
+// come straight from each live product listing; every item deep-links
+// back to its page so sizes, colors and current pricing stay current
+// at the source (checkout is handled there through Square).
+// Beans are guest roasters we pour and bag; tea is Kilogram Tea.
+// ============================================================
+export type MerchItem = {
+  name: string;
+  brand?: string;
+  blurb: string;
+  image: string;
+  alt: string;
+  href: string;
+};
+export type MerchGroup = {
+  heading: string;
+  index: string;
+  blurb: string;
+  items: MerchItem[];
+};
+
+const SHOP = 'https://www.fusioncoffeeshop.com';
+
+export const merch: {
+  shopUrl: string;
+  giftCardUrl: string;
+  roasters: string[];
+  groups: MerchGroup[];
+} = {
+  shopUrl: `${SHOP}/merch`,
+  giftCardUrl: `${SHOP}/product/gift-card/BS52ODAQWGJTYQT5KBVHTIBG`,
+  // Rotating roasters we feature and bag — all sold on the live shop. Includes
+  // the two currently pictured (Onyx, Heart) so the roll-call and the grid agree.
+  roasters: [
+    'Onyx',
+    'Heart',
+    'Black & White',
+    'Little Wolf',
+    'Sweet Bloom',
+    'Methodical',
+  ],
+  groups: [
+    {
+      heading: 'Apparel',
+      index: '01',
+      blurb: 'Hoodies, crews and tees in our warm, earthy palette — printed in small runs.',
+      items: [
+        {
+          name: 'Fusion Staple Hoodie',
+          blurb:
+            'Our downtown storefront, drawn in brick-and-navy across the back. Soft, heavyweight, year-round.',
+          image: '/images/merch/merch-fusion-staple-hoodie.png',
+          alt: 'Sand-colored Fusion Coffee pullover hoodie with a back print of the brick storefront and navy “Fusion Coffee” sign, ESTD 2022.',
+          href: `${SHOP}/product/fusion-staple-hoodie/199`,
+        },
+        {
+          name: 'Support Your Local Hoodie',
+          blurb:
+            'A retro mascot and a message we stand by, in deep navy. Heavy blend, made to live in.',
+          image: '/images/merch/merch-support-your-local-hoodie.png',
+          alt: 'Navy Fusion Coffee hoodie reading “Support Your Local Coffee Shop” around a retro smiling coffee-cup mascot, Fairfield, Illinois.',
+          href: `${SHOP}/product/support-your-local-hoodie/200`,
+        },
+        {
+          name: 'Fusion Coffee Crewneck',
+          blurb: 'The name, five times over, on a soft olive crew. Quietly loud.',
+          image: '/images/merch/merch-fusion-coffee-crewneck.jpg',
+          alt: 'Olive-green crewneck sweatshirt with “Fusion Coffee” repeated five times, the center line in solid white.',
+          href: `${SHOP}/product/fusion-coffee-crewneck/209`,
+        },
+        {
+          name: 'Support Your Local Crewneck',
+          blurb: 'The same retro mascot on a sage-green crew. Support starts at home.',
+          image: '/images/merch/merch-support-your-local-crewneck.png',
+          alt: 'Sage-green crewneck reading “Support Your Local Coffee Shop” around a retro coffee-cup mascot, Fairfield, Illinois.',
+          href: `${SHOP}/product/support-your-local-crewneck/198`,
+        },
+        {
+          name: 'Fusion Golden Bear Tee',
+          blurb: 'A little golden bear and a Fusion cup, on a soft, garment-dyed cotton tee.',
+          image: '/images/merch/merch-fusion-golden-bear-tee.jpg',
+          alt: 'Natural cotton tee with a cartoon teddy bear hugging a black Fusion Coffee to-go cup.',
+          href: `${SHOP}/product/fusion-golden-bear-tee/P7TQ7MOHK6MAYNTJADZD3HRO`,
+        },
+      ],
+    },
+    {
+      heading: 'Stickers & carry',
+      index: '02',
+      blurb: 'Little things for your laptop and your weekend bag.',
+      items: [
+        {
+          name: 'The Storefront Sticker',
+          blurb: 'The 207 East Main storefront, shrunk to laptop size.',
+          image: '/images/merch/merch-fusion-staple-sticker.jpg',
+          alt: 'Sticker of the Fusion Coffee brick storefront with the navy sign, ESTD 2022, 207 East Main Street, Fairfield, IL.',
+          href: `${SHOP}/product/fusion-staple-sticker/202`,
+        },
+        {
+          name: 'Support Your Local Badge',
+          blurb: 'Our round “support your local” badge — flexing cup included.',
+          image: '/images/merch/merch-support-your-local-sticker.jpg',
+          alt: 'Round black-and-cream badge sticker reading “Support Your Local Coffee Shop” around a flexing coffee-cup mascot.',
+          href: `${SHOP}/product/support-your-local-sticker/203`,
+        },
+        {
+          name: 'Pour-Over Sticker',
+          blurb: 'A hand-drawn pour-over, kettle and coffee branch. Slow mornings, illustrated.',
+          image: '/images/merch/merch-sticker.jpg',
+          alt: 'Hand-drawn sticker of a pour-over Chemex and gooseneck kettle with a coffee branch reading “Support Your Local Coffee Shop, Fusion Coffee.”',
+          href: `${SHOP}/product/sticker/80`,
+        },
+        {
+          name: 'Canvas Tote',
+          blurb: 'Hand-made-goods canvas for beans, books and the farmers-market haul.',
+          image: '/images/merch/merch-tote-bag.png',
+          alt: 'Natural canvas tote printed “Support Your Local Coffee Shop” over a coffee-cup mascot, Fusion Coffee, Fairfield, IL.',
+          href: `${SHOP}/product/tote-bag/201`,
+        },
+      ],
+    },
+    {
+      heading: 'Coffee, by the bag',
+      index: '03',
+      blurb: 'Whole-bean bags from the roasters we feature on bar — to brew the shop at home.',
+      items: [
+        {
+          name: 'Southern Weather',
+          brand: 'Onyx Coffee Lab',
+          blurb: 'Milk chocolate, plum and candied walnuts. Juicy, with a twist of citrus oil.',
+          image: '/images/merch/merch-onyx-southern-weather.jpg',
+          alt: 'Onyx Coffee Lab “Southern Weather” bean box in charcoal with embossed botanical artwork.',
+          href: `${SHOP}/product/onyx-southern-weather/89`,
+        },
+        {
+          name: 'Tropical Weather',
+          brand: 'Onyx Coffee Lab',
+          blurb: 'Mixed berries, sweet tea, raw honey and plum. Bright and easy-drinking.',
+          image: '/images/merch/merch-onyx-tropical-weather.jpg',
+          alt: 'Onyx Coffee Lab “Tropical Weather” bean box in lavender with embossed botanical artwork.',
+          href: `${SHOP}/product/onyx-tropical-weather/91`,
+        },
+        {
+          name: 'Stereo Blend',
+          brand: 'Heart Coffee Roasters',
+          blurb: 'A seasonal blend — tasting notes shift with the harvest. Whole bean, 16 oz.',
+          image: '/images/merch/merch-stereo-blend.jpg',
+          alt: 'Silver foil bag of Heart Coffee Roasters “Stereo Blend” whole-bean coffee, 16 oz.',
+          href: `${SHOP}/product/stereo-blend/88`,
+        },
+      ],
+    },
+    {
+      heading: 'Tea, loose leaf',
+      index: '04',
+      blurb: 'Organic loose-leaf from Kilogram Tea — the same ones we steep on bar.',
+      items: [
+        {
+          name: 'Organic Blend 333',
+          brand: 'Kilogram Tea',
+          blurb: 'A caffeine-free herbal tisane — peppermint, lavender and chamomile.',
+          image: '/images/merch/merch-organic-blend-333-box.jpg',
+          alt: 'Kilogram Tea “Organic Blend 333” loose-leaf herbal tisane in purple packaging.',
+          href: `${SHOP}/product/organic-blend-333-box/58`,
+        },
+        {
+          name: 'Organic Earl Grey',
+          brand: 'Kilogram Tea',
+          blurb: 'Loose-leaf black tea — malty and balanced with the citrus of bergamot.',
+          image: '/images/merch/merch-organic-earl-grey-box.jpg',
+          alt: 'Kilogram Tea “Organic Earl Grey” loose-leaf black tea in red packaging.',
+          href: `${SHOP}/product/organic-earl-grey-box/57`,
+        },
+        {
+          name: 'Organic Jasmine Peach',
+          brand: 'Kilogram Tea',
+          blurb: 'Loose-leaf white tea with jasmine and ripe peach. Soft and floral.',
+          image: '/images/merch/merch-organic-jasmine-peach.jpg',
+          alt: 'Kilogram Tea “Organic Jasmine Peach” loose-leaf white tea in blue packaging.',
+          href: `${SHOP}/product/organic-jasmine-peach/59`,
+        },
+      ],
+    },
+  ],
+};
+
 // Photography library, named for intent.
 export const photos = {
+  // Greenery-enriched brick interior — the homepage hero.
+  hero: '/images/hero-brick-greenery.jpg',
+  heroAlt: '/images/hero-brick-greenery-alt.jpg',
   interior: '/images/interior-brick-tables.jpg',
   loungeNeon: '/images/lounge-neon.jpg',
   barWindow: '/images/bar-window.jpg',
   barEspresso: '/images/bar-espresso-flowers.jpg',
-  menuBoard: '/images/menu-board-wall.jpg',
+  // Greener version of the wood-dowel menu wall, used on the home page.
+  menuBoard: '/images/menu-board-greenery.jpg',
+  menuBoardOriginal: '/images/menu-board-wall.jpg',
   merchRack: '/images/merch-rack.jpg',
   latteArt: '/images/latte-art-gingerbread.jpg',
   flight: '/images/drink-flight.jpg',
@@ -154,3 +586,185 @@ export const logo = {
   neon: '/logo/fusion-neon.png',
   neonSquare: '/logo/fusion-neon-square.jpg',
 };
+
+// ============================================================
+// Time helpers + "open now" logic — one source of truth, shared
+// by the OpenStatus pill and the structured data. All reasoning
+// is in the shop's local time (site.timezone), never the visitor's.
+// ============================================================
+
+// "6:00 AM" / "4:00 PM" -> minutes past midnight (e.g. 360 / 960).
+export function parseClock(t: string): number {
+  const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return 0;
+  let h = parseInt(m[1], 10) % 12;
+  if (/pm/i.test(m[3])) h += 12;
+  return h * 60 + parseInt(m[2], 10);
+}
+
+// "6:00 AM" -> "06:00", "6:00 PM" -> "18:00" — the 24h form Schema.org wants.
+export function to24h(t: string): string {
+  const mins = parseClock(t);
+  const h = String(Math.floor(mins / 60)).padStart(2, '0');
+  const m = String(mins % 60).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+export type OpenStatus = {
+  open: boolean;
+  /** Short status line, e.g. "Open now · closes 6pm" or "Closed · opens 6am". */
+  label: string;
+};
+
+// "6:00 PM" -> "6pm", "6:30 AM" -> "6:30am" — compact for the pill.
+function compactClock(t: string): string {
+  const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return t.toLowerCase();
+  const min = m[2] === '00' ? '' : `:${m[2]}`;
+  return `${parseInt(m[1], 10)}${min}${m[3].toLowerCase()}`;
+}
+
+/**
+ * Resolve open/closed for a given shop-local weekday + minute-of-day. Pure, so
+ * the component can feed it an Intl-derived "now" and stay trivial. When closed,
+ * it points at the next opening so the pill always answers "...so when?".
+ */
+export function openStatusFor(weekday: string, minutesNow: number): OpenStatus {
+  const today = site.hours.find((h) => h.day === weekday);
+
+  if (today?.open && today.close) {
+    const open = parseClock(today.open);
+    const close = parseClock(today.close);
+    if (minutesNow >= open && minutesNow < close) {
+      return { open: true, label: `Open now · closes ${compactClock(today.close)}` };
+    }
+    if (minutesNow < open) {
+      return { open: false, label: `Closed · opens ${compactClock(today.open)}` };
+    }
+  }
+
+  // Closed for the day (already past close, or a no-hours day like Sunday).
+  // Walk forward to the next day that has opening hours.
+  const order = site.hours;
+  const idx = order.findIndex((h) => h.day === weekday);
+  for (let step = 1; step <= 7; step += 1) {
+    const next = order[(idx + step) % 7];
+    if (next?.open) {
+      const when = step === 1 ? 'tomorrow' : next.short;
+      return { open: false, label: `Closed · opens ${when} ${compactClock(next.open)}` };
+    }
+  }
+  return { open: false, label: 'Closed' };
+}
+
+// ============================================================
+// Structured data (JSON-LD) — a CafeOrCoffeeShop graph + its Menu,
+// built from the single source of truth above so hours, address,
+// geo and prices can never drift from what the page shows. Rendered
+// once, statically, in the root layout.
+// ============================================================
+const SITE_URL = 'https://www.fusioncoffeeshop.com';
+
+function openingHoursSpecification() {
+  return site.hours
+    .filter((h) => h.open && h.close)
+    .map((h) => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: `https://schema.org/${h.day}`,
+      opens: to24h(h.open as string),
+      closes: to24h(h.close as string),
+    }));
+}
+
+function menuJsonLd() {
+  const priced = (items: { name: string; price: string }[]) =>
+    items.map((it) => ({
+      '@type': 'MenuItem',
+      name: it.name,
+      offers: {
+        '@type': 'Offer',
+        price: it.price.replace(/[^0-9.]/g, ''),
+        priceCurrency: 'USD',
+      },
+    }));
+
+  return {
+    '@type': 'Menu',
+    '@id': `${SITE_URL}/menu/#menu`,
+    name: 'Fusion Coffee Menu',
+    hasMenuSection: [
+      ...regularMenu.drinks.map((g) => ({
+        '@type': 'MenuSection',
+        name: g.heading,
+        hasMenuItem: priced(g.items),
+      })),
+      {
+        '@type': 'MenuSection',
+        name: 'Breakfast Sandwiches',
+        description: regularMenu.breakfastSandwiches.note,
+        hasMenuItem: regularMenu.breakfastSandwiches.items.map((it) => ({
+          '@type': 'MenuItem',
+          name: it.name,
+          description: it.description,
+          offers: { '@type': 'Offer', price: it.price.replace(/[^0-9.]/g, ''), priceCurrency: 'USD' },
+        })),
+      },
+      { '@type': 'MenuSection', name: 'Eats', hasMenuItem: priced(regularMenu.eats) },
+      { '@type': 'MenuSection', name: 'Sandwiches', hasMenuItem: priced(regularMenu.sandwiches) },
+      {
+        '@type': 'MenuSection',
+        name: summerMenu.title,
+        description: summerMenu.intro,
+        // Seasonal items are names + descriptions only (no published prices).
+        hasMenuItem: summerMenu.groups.flatMap((g) =>
+          g.items.map((it) => ({ '@type': 'MenuItem', name: it.name, description: it.blurb })),
+        ),
+      },
+    ],
+  };
+}
+
+export function jsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CafeOrCoffeeShop',
+        '@id': `${SITE_URL}/#business`,
+        name: site.name,
+        legalName: site.legalName,
+        description: site.shortPitch,
+        url: `${SITE_URL}/`,
+        image: `${SITE_URL}/og.jpg`,
+        logo: `${SITE_URL}${logo.neon}`,
+        telephone: site.phoneHref.replace('tel:', ''),
+        email: site.email,
+        priceRange: site.priceRange,
+        servesCuisine: ['Coffee', 'Espresso', 'Breakfast', 'Café'],
+        foundingDate: String(site.established),
+        currenciesAccepted: 'USD',
+        address: {
+          '@type': 'PostalAddress',
+          streetAddress: site.address.street,
+          addressLocality: site.address.city,
+          addressRegion: site.address.state,
+          postalCode: site.address.zip,
+          addressCountry: 'US',
+        },
+        geo: {
+          '@type': 'GeoCoordinates',
+          latitude: site.geo.lat,
+          longitude: site.geo.lng,
+        },
+        hasMap: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          `${site.name} ${site.address.full}`,
+        )}`,
+        openingHoursSpecification: openingHoursSpecification(),
+        sameAs: [site.social.instagram.url, site.social.facebook.url],
+        hasMenu: `${SITE_URL}/menu/#menu`,
+        acceptsReservations: false,
+      },
+      menuJsonLd(),
+    ],
+  };
+}
