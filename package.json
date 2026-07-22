@@ -4,7 +4,9 @@
   "private": true,
   "description": "Marketing site for Fusion Coffee — Fairfield, IL",
   "scripts": {
+    "predev": "rm -rf .next",
     "dev": "next dev",
+    "dev:fresh": "rm -rf .next node_modules/.cache && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

@@ -1,4 +1,5 @@
 import { Bean } from './icons';
+import { Sprig } from './Botanical';
 
 /**
  * Infinite scrolling editorial strip. Content is duplicated so the -50%
@@ -23,7 +24,11 @@ export default function Marquee({
             <span className="px-7 font-display text-xl italic text-ink/80 md:text-2xl">
               {item}
             </span>
-            <Bean className="h-4 w-4 text-brick/70" />
+            {i % 2 === 0 ? (
+              <Bean className="h-4 w-4 text-brick/70" />
+            ) : (
+              <Sprig className="h-5 w-5 text-sage/80" />
+            )}
           </span>
         ))}
       </div>

@@ -106,3 +106,33 @@ export function Bean(props: IconProps) {
     </svg>
   );
 }
+
+// ---- Bottom tab bar icons (mobile app shell) ----
+
+export function Home(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m4 11 8-7 8 7" />
+      <path d="M6 9.5V20h12V9.5" />
+    </svg>
+  );
+}
+
+export function Cup(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 9.5h11V15a4.5 4.5 0 0 1-4.5 4.5H9.5A4.5 4.5 0 0 1 5 15V9.5Z" />
+      <path d="M16 11h1.4a2.6 2.6 0 0 1 0 5.2H16" />
+      <path d="M8.2 6.5c0-.9.6-1.1.6-2M12 6.5c0-.9.6-1.1.6-2" />
+    </svg>
+  );
+}
+
+export function Bag(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5.7 8.2h12.6l-.75 10.6a2.1 2.1 0 0 1-2.1 1.95H8.55a2.1 2.1 0 0 1-2.1-1.95L5.7 8.2Z" />
+      <path d="M9 10.2V6.7a3 3 0 0 1 6 0v3.5" />
+    </svg>
+  );
+}

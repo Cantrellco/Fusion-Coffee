@@ -50,12 +50,19 @@ export default function Newsletter() {
           <label htmlFor="newsletter-email" className="sr-only">
             Email address
           </label>
+          {/* inputMode/autoCapitalize/autoCorrect/enterKeyHint are inert on
+              desktop — they give phones the email keyboard, stop auto-caps/
+              autocorrect mangling the address, and label return "send". */}
           <input
             id="newsletter-email"
             type="email"
             name="email"
             required
             autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            enterKeyHint="send"
             placeholder="you@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

@@ -3,6 +3,22 @@
 // Real shop details carried over from the original site.
 // ============================================================
 
+// Base URL of the Square-hosted store (online ordering, merch product pages,
+// gift cards). Every "Order now" / merch / gift-card link derives from this.
+//
+// ⚠️ CUTOVER: today the Square store lives on www.fusioncoffeeshop.com — the
+// SAME host this new marketing site will take over. Those cannot coexist. When
+// we point www.fusioncoffeeshop.com at the new site, the Square store falls
+// back to a subdomain (branded `order.fusioncoffeeshop.com` on a paid Square
+// plan, or the free `<something>.square.site`). Change this ONE value to that
+// subdomain at cutover and every store link follows.
+//
+// Do NOT confuse this with SITE_URL (bottom of file) — that is THIS site's own
+// domain (canonical, JSON-LD, OG) and stays https://www.fusioncoffeeshop.com.
+// Verify the /s/order, /merch and /product/... paths survive on the new store
+// host before flipping DNS (Square usually preserves them).
+const SQUARE_STORE = 'https://www.fusioncoffeeshop.com';
+
 export const site = {
   name: 'Fusion Coffee',
   legalName: 'Fusion Coffee LLC',
@@ -54,8 +70,8 @@ export const site = {
 
   // Destination for every "Order now" CTA — the live Square online-order
   // surface (verified 200; the store root and /order are a click short / 404).
-  // Swap this single value if the ordering experience ever moves.
-  orderUrl: 'https://www.fusioncoffeeshop.com/s/order',
+  // Derived from SQUARE_STORE (top of file) so cutover is a single edit.
+  orderUrl: `${SQUARE_STORE}/s/order`,
 
   // Owned-channel signup. Paste the shop's Square Marketing (or Mailchimp)
   // hosted form action here to POST subscribers straight in; while it's empty
@@ -397,7 +413,9 @@ export type MerchGroup = {
   items: MerchItem[];
 };
 
-const SHOP = 'https://www.fusioncoffeeshop.com';
+// Alias of SQUARE_STORE (top of file) — every merch/product link derives from
+// it, so the cutover swap happens in one place.
+const SHOP = SQUARE_STORE;
 
 export const merch: {
   shopUrl: string;
@@ -406,6 +424,10 @@ export const merch: {
   groups: MerchGroup[];
 } = {
   shopUrl: `${SHOP}/merch`,
+  // ⚠️ eGift cards CANNOT run on a custom domain (Square's own restriction), so
+  // after cutover this may need to become the Square-hosted eGift order-site URL
+  // (a *.square.site link from Dashboard → Items → Gift cards → eGift → Configure)
+  // rather than a /product/ page on the store subdomain. Confirm at cutover.
   giftCardUrl: `${SHOP}/product/gift-card/BS52ODAQWGJTYQT5KBVHTIBG`,
   // Rotating roasters we feature and bag — all sold on the live shop. Includes
   // the two currently pictured (Onyx, Heart) so the roll-call and the grid agree.
@@ -427,7 +449,7 @@ export const merch: {
           name: 'Fusion Staple Hoodie',
           blurb:
             'Our downtown storefront, drawn in brick-and-navy across the back. Soft, heavyweight, year-round.',
-          image: '/images/merch/merch-fusion-staple-hoodie.png',
+          image: '/images/merch/merch-fusion-staple-hoodie.webp',
           alt: 'Sand-colored Fusion Coffee pullover hoodie with a back print of the brick storefront and navy “Fusion Coffee” sign, ESTD 2022.',
           href: `${SHOP}/product/fusion-staple-hoodie/199`,
         },
@@ -435,7 +457,7 @@ export const merch: {
           name: 'Support Your Local Hoodie',
           blurb:
             'A retro mascot and a message we stand by, in deep navy. Heavy blend, made to live in.',
-          image: '/images/merch/merch-support-your-local-hoodie.png',
+          image: '/images/merch/merch-support-your-local-hoodie.webp',
           alt: 'Navy Fusion Coffee hoodie reading “Support Your Local Coffee Shop” around a retro smiling coffee-cup mascot, Fairfield, Illinois.',
           href: `${SHOP}/product/support-your-local-hoodie/200`,
         },
@@ -449,7 +471,7 @@ export const merch: {
         {
           name: 'Support Your Local Crewneck',
           blurb: 'The same retro mascot on a sage-green crew. Support starts at home.',
-          image: '/images/merch/merch-support-your-local-crewneck.png',
+          image: '/images/merch/merch-support-your-local-crewneck.webp',
           alt: 'Sage-green crewneck reading “Support Your Local Coffee Shop” around a retro coffee-cup mascot, Fairfield, Illinois.',
           href: `${SHOP}/product/support-your-local-crewneck/198`,
         },
@@ -491,7 +513,7 @@ export const merch: {
         {
           name: 'Canvas Tote',
           blurb: 'Hand-made-goods canvas for beans, books and the farmers-market haul.',
-          image: '/images/merch/merch-tote-bag.png',
+          image: '/images/merch/merch-tote-bag.webp',
           alt: 'Natural canvas tote printed “Support Your Local Coffee Shop” over a coffee-cup mascot, Fusion Coffee, Fairfield, IL.',
           href: `${SHOP}/product/tote-bag/201`,
         },
@@ -663,6 +685,9 @@ export function openStatusFor(weekday: string, minutesNow: number): OpenStatus {
 // geo and prices can never drift from what the page shows. Rendered
 // once, statically, in the root layout.
 // ============================================================
+// THIS site's own canonical domain (used for JSON-LD @id, OG image, links).
+// Stays https://www.fusioncoffeeshop.com through cutover — do NOT point it at a
+// Square subdomain. Contrast with SQUARE_STORE (top of file), which moves.
 const SITE_URL = 'https://www.fusioncoffeeshop.com';
 
 function openingHoursSpecification() {

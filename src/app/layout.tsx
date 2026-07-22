@@ -3,7 +3,8 @@ import { Fraunces, Hanken_Grotesk } from 'next/font/google';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { site } from '@/lib/site';
+import BottomNav from '@/components/BottomNav';
+import { site, photos, jsonLd } from '@/lib/site';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -28,6 +29,7 @@ export const metadata: Metadata = {
   },
   description:
     'A curated coffee experience in the heart of downtown Fairfield, Illinois. Specialty espresso, matcha, açaí bowls and a warm, welcoming space. Skip the line — order online.',
+  alternates: { canonical: '/' },
   keywords: [
     'Fusion Coffee',
     'Fairfield Illinois coffee',
@@ -60,11 +62,23 @@ export const metadata: Metadata = {
       'Specialty coffee, matcha & açaí in a warm, welcoming space in downtown Fairfield, IL.',
     images: ['/og.jpg'],
   },
+  // iOS ignores the web-app manifest for standalone installs — these meta tags
+  // are the only way "Add to Home Screen" gets an app title and a dark,
+  // content-under-status-bar chrome that matches themeColor.
+  appleWebApp: {
+    capable: true,
+    title: 'Fusion',
+    statusBarStyle: 'black-translucent',
+  },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  // Draw edge-to-edge on notched phones so the fixed bottom tab bar can pad
+  // itself with env(safe-area-inset-bottom) instead of floating above a
+  // letterboxed white strip.
+  viewportFit: 'cover',
   themeColor: '#1E1E1E',
 };
 
@@ -80,6 +94,17 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
+        {/* The hero image is the homepage LCP; with output:'export' + unoptimized
+            images nothing else prioritizes it, so hint it explicitly. React hoists
+            this <link> into <head>. */}
+        <link rel="preload" as="image" href={photos.hero} fetchPriority="high" />
+        {/* LocalBusiness + Menu structured data — powers the Google "open now /
+            hours / call" panel and rich results. Built from src/lib/site.ts so it
+            can never drift from the rendered page. */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
+        />
         {/* Mark JS as available before paint so scroll-reveals only hide when
             they can actually be revealed (no-JS users see everything). */}
         <script
@@ -96,6 +121,8 @@ export default function RootLayout({
         <Header />
         <main id="main">{children}</main>
         <Footer />
+        {/* Mobile app shell: persistent bottom tab bar (< md only). */}
+        <BottomNav />
       </body>
     </html>
   );

@@ -41,7 +41,7 @@ export default function SummerMenu({ withCta = false }: { withCta?: boolean }) {
   return (
     <section
       className={`summer-sun grain-soft relative overflow-hidden bg-cream-deep ${
-        withCta ? 'py-24 md:py-32' : 'pb-20 pt-14 md:pb-28'
+        withCta ? 'py-16 md:py-32' : 'pb-16 pt-12 md:pb-28 md:pt-14'
       }`}
     >
       {/* Faint summer light + greenery, all behind the content (z-0). */}
@@ -120,10 +120,14 @@ export default function SummerMenu({ withCta = false }: { withCta?: boolean }) {
                       {/* Per-item specimen sketch bleeding off the bottom-right
                           corner — each item drawn in the shop's pen (see
                           SummerSpecimens). Falls back to the generic citrus/
-                          sprig mark for any item without a drawing yet. */}
+                          sprig mark for any item without a drawing yet.
+                          Below md the sketch drops to h-20 (and the blurb
+                          reserves pr-12) — at phone width the full h-28 art
+                          ran under the blurb's last lines, e.g. "…espresso
+                          or matcha." colliding with the sprig. */}
                       <span
                         aria-hidden
-                        className="pointer-events-none absolute -bottom-4 -right-3 z-0 h-28 w-28 opacity-55"
+                        className="pointer-events-none absolute -bottom-4 -right-3 z-0 h-20 w-20 opacity-55 md:h-28 md:w-28"
                       >
                         {specimenFor(item.name) ??
                           (isDrinks ? (
@@ -138,10 +142,14 @@ export default function SummerMenu({ withCta = false }: { withCta?: boolean }) {
                       >
                         {String(i + 1).padStart(2, '0')}
                       </span>
-                      <h3 className="relative z-10 max-w-[14rem] font-display text-2xl leading-tight text-ink">
+                      <h3 className="relative z-10 max-w-[17rem] md:max-w-[14rem] font-display text-2xl leading-tight text-ink">
                         {item.name}
                       </h3>
-                      <p className="relative z-10 mt-2.5 text-pretty leading-relaxed text-ink-muted">
+                      {/* pr-12 keeps the last lines clear of the corner sketch
+                          (h-20 bleeding -right-3 intrudes ~68px; padding +
+                          the card's own p-6 clears it). Desktop text never
+                          reached the corner, so md: drops the reserve. */}
+                      <p className="relative z-10 mt-2.5 text-pretty pr-12 leading-relaxed text-ink-muted md:pr-0">
                         {item.blurb}
                       </p>
                     </article>

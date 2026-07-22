@@ -56,10 +56,12 @@ const config: Config = {
           '96%': { opacity: '0.86' },
           '97%': { opacity: '1' },
         },
-        'steam-rise': {
-          '0%': { transform: 'translateY(0) scaleX(1)', opacity: '0' },
-          '30%': { opacity: '0.5' },
-          '100%': { transform: 'translateY(-46px) scaleX(1.6)', opacity: '0' },
+        // Slow ambient hero "breath": one pass, settles at 1.04 (not infinite —
+        // a looping scale reads as a GIF). Pure CSS, so the global reduced-motion
+        // clamp disables it for free.
+        'hero-drift': {
+          '0%': { transform: 'scale(1)' },
+          '100%': { transform: 'scale(1.04)' },
         },
         marquee: {
           '0%': { transform: 'translateX(0)' },
@@ -68,7 +70,7 @@ const config: Config = {
       },
       animation: {
         'neon-flicker': 'neon-flicker 6s linear infinite',
-        'steam-rise': 'steam-rise 4s ease-in-out infinite',
+        'hero-drift': 'hero-drift 22s ease-out forwards',
         marquee: 'marquee 38s linear infinite',
       },
     },

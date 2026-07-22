@@ -15,10 +15,13 @@ export default function NeonLogo({
   className = '',
   width = 132,
   priority = false,
+  flicker = false,
 }: {
   className?: string;
   width?: number;
   priority?: boolean;
+  /** Subtle real-neon flicker. Opt-in (footer only) — never on the steady nav. */
+  flicker?: boolean;
 }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -29,7 +32,7 @@ export default function NeonLogo({
       height={Math.round((width * LOGO_H) / LOGO_W)}
       loading={priority ? 'eager' : 'lazy'}
       decoding="async"
-      className={`neon-logo select-none ${className}`}
+      className={`neon-logo select-none ${flicker ? 'animate-neon-flicker' : ''} ${className}`}
       style={{ width, height: 'auto' }}
       draggable={false}
     />

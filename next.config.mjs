@@ -1,3 +1,8 @@
+// Optional subpath for project-style hosting (e.g. GitHub Pages at
+// /<repo>/). Only takes effect when GH_PAGES_BASE is set at build time,
+// so the default (root-domain) build is completely unaffected.
+const basePath = process.env.GH_PAGES_BASE || '';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Fully static output so the site deploys anywhere and can be wrapped
@@ -9,6 +14,7 @@ const nextConfig = {
     unoptimized: true,
   },
   trailingSlash: true,
+  ...(basePath ? { basePath, assetPrefix: basePath } : {}),
 };
 
 export default nextConfig;

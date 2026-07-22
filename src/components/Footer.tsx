@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { nav, site } from '@/lib/site';
 import NeonLogo from './NeonLogo';
 import CurrentYear from './CurrentYear';
-import { ArrowUpRight, Instagram, Facebook, Mail, MapPin, Clock } from './icons';
+import { CornerBotanical } from './Botanical';
+import { ArrowUpRight, Instagram, Facebook, Mail, MapPin, Clock, Phone } from './icons';
 
 const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
   `${site.name} ${site.address.full}`,
@@ -12,7 +13,10 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="relative overflow-hidden bg-espresso text-cream">
+    // pb-tabbar clears the fixed mobile tab bar INSIDE the espresso surface
+    // (padding on <body> would expose a cream strip behind the glass bar at
+    // page end). Zero at md and up — desktop unchanged.
+    <footer className="pb-tabbar relative overflow-hidden bg-espresso text-cream">
       {/* Oversized brand flourish */}
       <div
         aria-hidden
@@ -20,12 +24,14 @@ export default function Footer() {
       >
         Fusion
       </div>
+      <CornerBotanical position="tl" tone="text-oak/[0.08]" size="h-60 w-60" />
+      <CornerBotanical position="br" tone="text-sage/[0.10]" size="h-72 w-72" />
 
       <div className="relative mx-auto max-w-edge px-5 py-20 sm:px-8 md:py-28">
         <div className="grid gap-14 md:grid-cols-12">
           {/* Brand + invitation */}
           <div className="md:col-span-5">
-            <NeonLogo width={150} />
+            <NeonLogo width={150} flicker />
             <p className="mt-8 max-w-sm font-display text-2xl leading-snug text-cream/90">
               More than a coffee shop — a space to be connected to friends,
               family &amp; community.
@@ -121,6 +127,17 @@ export default function Footer() {
                   Email
                 </a>
               </li>
+              {site.phone && (
+                <li>
+                  <a
+                    href={site.phoneHref}
+                    className="link-underline inline-flex items-center gap-2 text-cream/80 hover:text-cream"
+                  >
+                    <Phone className="h-4 w-4" />
+                    {site.phone}
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>
