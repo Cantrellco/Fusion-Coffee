@@ -36,15 +36,13 @@ export default function Footer() {
               More than a coffee shop — a space to be connected to friends,
               family &amp; community.
             </p>
-            <a
-              href={site.orderUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href={site.orderPath}
               className="group mt-8 inline-flex items-center gap-2 bg-cream px-6 py-3 text-sm font-medium tracking-wide text-ink transition-colors duration-300 hover:bg-oak"
             >
               Order online
               <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </a>
+            </Link>
           </div>
 
           {/* Visit */}

@@ -247,15 +247,13 @@ export default function Header() {
             {/* Desktop-only: on mobile the bottom tab bar's raised brick disc
                 owns "Order" — one clear CTA per surface, and the compact top
                 bar keeps just brand + menu. */}
-            <a
-              href={site.orderUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href={site.orderPath}
               className="group hidden items-center gap-2 rounded-full bg-brick py-2 pl-4 pr-3 text-sm font-medium tracking-wide text-cream transition-colors duration-300 hover:bg-[#9b4128] sm:py-2.5 sm:pl-5 sm:pr-4 md:inline-flex"
             >
               Order
               <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </a>
+            </Link>
 
             <button
               ref={toggleRef}
@@ -363,15 +361,13 @@ export default function Header() {
           </nav>
 
           <div className="mt-6 px-6">
-            <a
-              href={site.orderUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href={site.orderPath}
               className="flex w-full items-center justify-center gap-2 rounded-full bg-brick py-4 text-sm font-medium uppercase tracking-mega text-cream active:scale-[0.985] motion-reduce:active:scale-100"
             >
               Order now
               <ArrowUpRight className="h-4 w-4" />
-            </a>
+            </Link>
             <div className="mt-6 flex items-center gap-3 text-cream/70">
               <a
                 href={site.social.instagram.url}

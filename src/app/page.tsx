@@ -60,8 +60,7 @@ export default function HomePage() {
                 sm: up the original inline wrap row is restored verbatim. */}
             <div className="mt-10 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
               <Button
-                href={site.orderUrl}
-                external
+                href={site.orderPath}
                 variant="primary"
                 className="w-full sm:w-auto"
               >

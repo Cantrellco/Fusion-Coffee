@@ -7,6 +7,7 @@ const BASE = 'https://www.fusioncoffeeshop.com';
 export default function sitemap(): MetadataRoute.Sitemap {
   const routes: { path: string; priority: number }[] = [
     { path: '/', priority: 1 },
+    { path: '/order/', priority: 0.9 },
     { path: '/menu/', priority: 0.9 },
     { path: '/merch/', priority: 0.7 },
     { path: '/party/', priority: 0.7 },

@@ -68,9 +68,14 @@ export const site = {
     email: 'fusioncoffeellc@gmail.com',
   },
 
-  // Destination for every "Order now" CTA — the live Square online-order
-  // surface (verified 200; the store root and /order are a click short / 404).
-  // Derived from SQUARE_STORE (top of file) so cutover is a single edit.
+  // Internal on-site ordering — every "Order" CTA routes here to /order, the
+  // custom cart + checkout built on this site (Square runs invisibly behind it
+  // via a serverless function). This is the single value the CTAs point at.
+  orderPath: '/order/',
+
+  // The Square-hosted ordering page (kept as a fallback / for the link-out
+  // approach). Derived from SQUARE_STORE (top of file) so cutover is a single
+  // edit. No longer wired to the CTAs now that /order handles ordering on-site.
   orderUrl: `${SQUARE_STORE}/s/order`,
 
   // Owned-channel signup. Paste the shop's Square Marketing (or Mailchimp)

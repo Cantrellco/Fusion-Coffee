@@ -235,7 +235,7 @@ export default function MenuPage() {
               Customize milk, flavors and sizing at the counter or online.
             </p>
           </div>
-          <Button href={site.orderUrl} external variant="cream">
+          <Button href={site.orderPath} variant="cream">
             Order online
           </Button>
         </div>

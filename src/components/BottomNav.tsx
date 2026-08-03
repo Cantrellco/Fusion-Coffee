@@ -119,19 +119,17 @@ export default function BottomNav() {
         ))}
 
         {/* Center Order action — raised brick disc, the tab bar's one accent.
-            External: straight to the live Square ordering surface. */}
+            Routes to the on-site order page (/order). */}
         <div className="relative flex items-end justify-center">
-          <a
-            href={site.orderUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href={site.orderPath}
             className="absolute -top-5 flex h-[58px] w-[58px] flex-col items-center justify-center gap-0.5 rounded-full border border-white/15 bg-brick text-cream shadow-lg shadow-black/40 transition-transform duration-300 ease-out-expo active:scale-95 motion-reduce:active:scale-100"
           >
             <Bean className="h-[22px] w-[22px]" />
             <span className="text-[10px] font-semibold uppercase leading-none tracking-wide">
               Order
             </span>
-          </a>
+          </Link>
         </div>
 
         {TABS_RIGHT.map((t) => (

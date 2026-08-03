@@ -162,7 +162,7 @@ export default function ContactPage() {
               Already know your order?
             </h2>
           </div>
-          <Button href={site.orderUrl} external variant="cream">
+          <Button href={site.orderPath} variant="cream">
             Order online
           </Button>
         </div>
