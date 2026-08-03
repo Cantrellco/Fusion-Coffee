@@ -505,8 +505,7 @@ export default function OrderExperience() {
                     </p>
                   </div>
                 ) : status === 'paying' ? (
-                  <div>
-                    <p className="mb-2 text-sm font-medium text-ink">Card details</p>
+                  <div className="animate-fade-up motion-reduce:animate-none">
                     <SquareCard
                       appId={SQ_APP_ID as string}
                       locationId={SQ_LOCATION_ID as string}

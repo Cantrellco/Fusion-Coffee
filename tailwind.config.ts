@@ -67,11 +67,23 @@ const config: Config = {
           '0%': { transform: 'translateX(0)' },
           '100%': { transform: 'translateX(-50%)' },
         },
+        // Soft entrance for revealed panels (e.g. the checkout card step).
+        'fade-up': {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        // Placeholder shimmer while the Square card iframe loads.
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'neon-flicker': 'neon-flicker 6s linear infinite',
         'hero-drift': 'hero-drift 22s ease-out forwards',
         marquee: 'marquee 38s linear infinite',
+        'fade-up': 'fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
+        shimmer: 'shimmer 1.4s ease-in-out infinite',
       },
     },
   },
