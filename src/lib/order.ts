@@ -1,9 +1,12 @@
 // ============================================================
 // Orderable menu — the data the on-site Order page (/order) runs on.
 //
-// It is DERIVED from `regularMenu` (the same in-shop menu shown on /menu),
-// so the order page can never drift from the menu page: one source of truth.
-// Prices are the real listed prices, converted to integer CENTS for exact math.
+// It is DERIVED from `summerMenu` + `regularMenu` (the same two menus shown on
+// /menu), in the same order /menu presents them — seasonal first, then drinks,
+// breakfast, eats, sandwiches — so the order page can never drift from the menu
+// page: one source of truth. Prices are the listed prices, converted to integer
+// CENTS for exact math. (Seasonal prices are derived, not printed — see the
+// SummerItem block in site.ts.)
 //
 // ⚠️ WIRE-UP: when the live Square catalog is connected, THIS FILE is what gets
 // replaced — the build step will map Square's CatalogItem / CatalogItemVariation
@@ -14,7 +17,7 @@
 // modifier pricing will arrive from the Square catalog.
 // ============================================================
 
-import { regularMenu } from './site';
+import { regularMenu, summerMenu } from './site';
 
 export type OrderModifierGroup = {
   id: string;
@@ -38,6 +41,8 @@ export type OrderCategory = {
   id: string;
   heading: string;
   note?: string;
+  /** Limited-time section — the UI badges it like the /menu seasonal chip. */
+  seasonal?: boolean;
   items: OrderItem[];
 };
 
@@ -69,6 +74,26 @@ const FLAVOR: OrderModifierGroup = {
 };
 
 export const orderMenu: OrderCategory[] = [
+  // Seasonal first — /menu leads with the Summer Menu, so /order does too.
+  // Its two groups (Drinks, Food) stay separate exactly as they read on /menu;
+  // the drinks take the same milk + flavor options as the regular bar, the
+  // food takes none. Blurbs carry over as the item description, and each item
+  // keeps its hand-drawn specimen sketch (matched by name in SummerSpecimens).
+  ...summerMenu.groups.map((group) => ({
+    id: `summer-${slug(group.heading)}`,
+    heading: `Summer ${group.heading}`,
+    note: summerMenu.eyebrow,
+    seasonal: true,
+    items: group.items.map((it) => ({
+      id: slug(it.name),
+      name: it.name,
+      priceCents: toCents(it.price),
+      description: it.blurb,
+      ...(/drink/i.test(group.heading) ? { modifiers: [MILK, FLAVOR] } : {}),
+      squareCatalogObjectId: null,
+    })),
+  })),
+
   // Drinks: coffee + non-coffee get milk & flavor; tea keeps flavor only.
   ...regularMenu.drinks.map((group) => ({
     id: slug(group.heading),

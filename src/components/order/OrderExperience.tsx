@@ -10,6 +10,9 @@ import {
   type OrderItem,
 } from '@/lib/order';
 import { ArrowUpRight, Close } from '@/components/icons';
+import { CitrusSlice } from '@/components/Citrus';
+import { specimenFor } from '@/components/SummerSpecimens';
+import SquareCard from './SquareCard';
 
 // ============================================================
 // On-site ordering — the interactive heart of /order.
@@ -31,6 +34,15 @@ const PICKUP_OPTIONS = [
   'In 45 minutes',
   'In 1 hour',
 ];
+
+// Public Square config (safe in the browser), baked at build from .env.local.
+// When present, checkout shows Square's real card form; when absent, it falls
+// back to the honest "payment isn't switched on yet" panel.
+const SQ_APP_ID = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
+const SQ_LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID;
+const SQ_ENV: 'sandbox' | 'production' =
+  process.env.NEXT_PUBLIC_SQUARE_ENV === 'production' ? 'production' : 'sandbox';
+const SQUARE_READY = Boolean(SQ_APP_ID && SQ_LOCATION_ID);
 
 type CartState = { lines: CartLine[] };
 type CartAction =
@@ -87,7 +99,13 @@ function cartReducer(state: CartState, action: CartAction): CartState {
   }
 }
 
-type CheckoutStatus = 'idle' | 'submitting' | 'not_configured' | 'placed' | 'error';
+type CheckoutStatus =
+  | 'idle'
+  | 'paying'
+  | 'submitting'
+  | 'not_configured'
+  | 'placed'
+  | 'error';
 
 export default function OrderExperience() {
   const [state, dispatch] = useReducer(cartReducer, { lines: [] });
@@ -127,7 +145,19 @@ export default function OrderExperience() {
   const dueCents = subtotal + tipCents;
   const itemCount = state.lines.reduce((n, l) => n + l.qty, 0);
 
-  async function placeOrder() {
+  // "Continue to payment": if Square is wired up, reveal the card form;
+  // otherwise fall back to the honest pre-launch panel.
+  function beginCheckout() {
+    if (itemCount === 0 || !name.trim()) return;
+    setErrorMsg('');
+    if (SQUARE_READY) {
+      setStatus('paying');
+    } else {
+      void submitOrder();
+    }
+  }
+
+  async function submitOrder(sourceId?: string) {
     if (itemCount === 0 || !name.trim()) return;
     setStatus('submitting');
     setErrorMsg('');
@@ -136,6 +166,7 @@ export default function OrderExperience() {
       pickup,
       tipCents,
       subtotalCents: subtotal,
+      sourceId,
       lines: state.lines.map((l) => ({
         itemId: l.itemId,
         name: l.name,
@@ -152,18 +183,23 @@ export default function OrderExperience() {
         body: JSON.stringify(payload),
       });
       if (res.status === 501) {
-        // Function reachable but Square keys not set yet — the expected
-        // pre-launch state. Show the honest "ready for Square" panel.
+        // Keys not set yet — the expected pre-launch state.
         setStatus('not_configured');
         return;
       }
-      if (!res.ok) throw new Error(`Checkout failed (${res.status})`);
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error || `Checkout failed (${res.status})`);
       dispatch({ type: 'clear' });
       setStatus('placed');
     } catch {
-      // No function deployed yet (static preview) also lands here — treat it
-      // as the same "not connected yet" state rather than a scary error.
-      setStatus('not_configured');
+      if (sourceId) {
+        // The card charge failed — keep them on the card form to retry.
+        setErrorMsg('That payment did not go through. Please try again.');
+        setStatus('paying');
+      } else {
+        // No function deployed (static preview) → same "not connected" state.
+        setStatus('not_configured');
+      }
     }
   }
 
@@ -214,15 +250,28 @@ export default function OrderExperience() {
           <div className="mt-8 flex flex-col gap-12">
             {orderMenu.map((cat) => (
               <div key={cat.id}>
-                <div className="flex items-baseline justify-between gap-4 border-b border-ink/15 pb-3">
+                {/* flex-wrap so the seasonal chip drops to its own line on a
+                    phone instead of squeezing "Summer Drinks" into two lines. */}
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-b border-ink/15 pb-3">
                   <h2 className="font-display text-2xl text-ink md:text-3xl">
                     {cat.heading}
                   </h2>
-                  {cat.note && (
-                    <span className="shrink-0 text-xs uppercase tracking-mega text-ink-muted">
-                      {cat.note}
-                    </span>
-                  )}
+                  {/* Seasonal sections wear the same citrus "Limited time" chip
+                      the /menu Summer header does, so the two pages read as one
+                      menu; everything else keeps the plain note (e.g. 6–11am). */}
+                  {cat.note &&
+                    (cat.seasonal ? (
+                      <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-oak/45 bg-cream-deep px-3 py-1">
+                        <CitrusSlice className="h-3.5 w-3.5 shrink-0 text-terracotta" />
+                        <span className="text-xs uppercase tracking-mega text-brick-deep">
+                          {cat.note}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="shrink-0 text-xs uppercase tracking-mega text-ink-muted">
+                        {cat.note}
+                      </span>
+                    ))}
                 </div>
                 <div className="mt-4 flex flex-col divide-y divide-ink/10">
                   {cat.items.map((item) => (
@@ -385,24 +434,48 @@ export default function OrderExperience() {
                         Your cart is saved.
                       </p>
                     </div>
+                  ) : status === 'paying' ? (
+                    <div className="mt-5">
+                      <p className="mb-2 text-sm font-medium text-ink">Card details</p>
+                      <SquareCard
+                        appId={SQ_APP_ID as string}
+                        locationId={SQ_LOCATION_ID as string}
+                        env={SQ_ENV}
+                        amountLabel={formatCents(dueCents)}
+                        onPaid={(sourceId) => submitOrder(sourceId)}
+                        onError={(m) => setErrorMsg(m)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorMsg('');
+                          setStatus('idle');
+                        }}
+                        className="mt-3 w-full text-center text-xs text-ink-muted underline underline-offset-2 transition-colors hover:text-ink"
+                      >
+                        Back to order
+                      </button>
+                    </div>
                   ) : (
                     <button
                       type="button"
-                      onClick={placeOrder}
+                      onClick={beginCheckout}
                       disabled={status === 'submitting' || !name.trim()}
                       className="group mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-brick py-4 text-sm font-medium tracking-wide text-cream transition-colors hover:bg-[#9b4128] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {status === 'submitting'
-                        ? 'Sending…'
+                        ? 'Processing…'
                         : `Continue to payment · ${formatCents(dueCents)}`}
                       <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                     </button>
                   )}
-                  {!name.trim() && status !== 'not_configured' && (
-                    <p className="mt-2 text-center text-xs text-ink-muted">
-                      Add a name to continue.
-                    </p>
-                  )}
+                  {!name.trim() &&
+                    status !== 'not_configured' &&
+                    status !== 'paying' && (
+                      <p className="mt-2 text-center text-xs text-ink-muted">
+                        Add a name to continue.
+                      </p>
+                    )}
                   {errorMsg && (
                     <p className="mt-2 text-center text-xs text-brick">{errorMsg}</p>
                   )}
@@ -430,6 +503,10 @@ function MenuItemRow({
     Object.fromEntries((item.modifiers ?? []).map((g) => [g.id, g.options[0]])),
   );
   const [justAdded, setJustAdded] = useState(false);
+  // The item's hand-drawn specimen sketch, matched by exact name — the same
+  // drawings the /menu summer cards carry. null for everything unillustrated,
+  // which is every regular-menu item today.
+  const specimen = specimenFor(item.name);
 
   function add() {
     const modifiers: CartModifier[] = (item.modifiers ?? []).map((g) => ({
@@ -444,43 +521,60 @@ function MenuItemRow({
 
   return (
     <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 py-4">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-3">
-          <h3 className="font-display text-xl text-ink">{item.name}</h3>
-          <span className="text-sm tabular-nums text-ink-muted">
-            {formatCents(item.priceCents)}
+      <div className="flex min-w-0 flex-1 items-start gap-3">
+        {/* On /menu these sketches sit behind the card as faint watermarks; in
+            a dense order list they earn their keep as a small legible mark that
+            identifies the drink at a glance. Decorative — the name is the
+            accessible label, so the wrapper stays aria-hidden. */}
+        {specimen && (
+          <span
+            aria-hidden
+            className="mt-0.5 h-10 w-10 shrink-0 opacity-90 sm:h-11 sm:w-11"
+          >
+            {specimen}
           </span>
-        </div>
-        {item.description && (
-          <p className="mt-1 max-w-prose text-sm leading-relaxed text-ink-muted">
-            {item.description}
-          </p>
         )}
-        {item.modifiers && item.modifiers.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {item.modifiers.map((group) => (
-              <label key={group.id} className="inline-flex items-center gap-1.5">
-                <span className="sr-only">{group.label}</span>
-                <select
-                  value={selection[group.id]}
-                  onChange={(e) =>
-                    setSelection((s) => ({ ...s, [group.id]: e.target.value }))
-                  }
-                  aria-label={`${group.label} for ${item.name}`}
-                  className="rounded-full border border-ink/15 bg-cream px-3 py-1.5 text-xs text-ink outline-none transition-colors focus:border-brick"
-                >
-                  {group.options.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {group.label === 'Flavor' && opt !== 'None'
-                        ? `+ ${opt}`
-                        : opt}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-3">
+            <h3 className="font-display text-xl text-ink">{item.name}</h3>
+            <span className="text-sm tabular-nums text-ink-muted">
+              {formatCents(item.priceCents)}
+            </span>
           </div>
-        )}
+          {item.description && (
+            <p className="mt-1 max-w-prose text-sm leading-relaxed text-ink-muted">
+              {item.description}
+            </p>
+          )}
+          {item.modifiers && item.modifiers.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {item.modifiers.map((group) => (
+                <label
+                  key={group.id}
+                  className="inline-flex items-center gap-1.5"
+                >
+                  <span className="sr-only">{group.label}</span>
+                  <select
+                    value={selection[group.id]}
+                    onChange={(e) =>
+                      setSelection((s) => ({ ...s, [group.id]: e.target.value }))
+                    }
+                    aria-label={`${group.label} for ${item.name}`}
+                    className="rounded-full border border-ink/15 bg-cream px-3 py-1.5 text-xs text-ink outline-none transition-colors focus:border-brick"
+                  >
+                    {group.options.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {group.label === 'Flavor' && opt !== 'None'
+                          ? `+ ${opt}`
+                          : opt}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
       <button
         type="button"

@@ -166,11 +166,22 @@ export const partyBooking: {
 
 // ============================================================
 // Summer Menu — seasonal, limited-time. Featured on the home
-// page directly under the hero. Names + descriptions only
-// (no prices), in keeping with the rest of the site.
+// page directly under the hero and at the top of /menu.
 // Source photo: /Fusion Images/menu-summer.jpeg.
+//
+// PRICES: the shop's seasonal board carries no printed prices, so
+// /menu and the home page deliberately show names + descriptions
+// only — unchanged. The `price` below exists purely so /order can
+// put these in a cart, and it is the ONE place to correct them.
+//
+// ⚠️ DERIVED, NOT TRANSCRIBED. Each is set to its nearest regular-menu
+// analog (latte $5.50, cold brew $5.50, lemonade $4.00, yogurt bowl
+// $7.50; the affogato has no analog and is espresso $3.00 + ice cream).
+// Seasonal specialty drinks commonly carry a $0.50–$1.00 upcharge over
+// the base drink, so confirm each with the shop before real payments
+// go live. Square catalog sync will overwrite all of them.
 // ============================================================
-export type SummerItem = { name: string; blurb: string };
+export type SummerItem = { name: string; blurb: string; price: string };
 export type SummerGroup = { heading: string; items: SummerItem[] };
 
 export const summerMenu: {
@@ -189,30 +200,36 @@ export const summerMenu: {
       items: [
         {
           name: 'Blueberry Latte',
+          price: '$5.50', // = Latte
           blurb:
             'House-made blueberry syrup + milk of choice, topped with espresso or matcha.',
         },
         {
           name: 'Banana Pudding Latte',
+          price: '$5.50', // = Latte
           blurb:
             'House-made banana syrup + milk of choice + espresso, finished with banana cold foam and wafer crumble.',
         },
         {
           name: 'Root Beer Float Flash Brew',
+          price: '$5.50', // = Cold Brew
           blurb:
             'House-made root beer reduction + flash brew, topped with a vanilla cream float.',
         },
         {
           name: 'Cereal Milk Latte',
+          price: '$5.50', // = Latte
           blurb: 'Fruity Pebbles–infused oat milk + espresso.',
         },
         {
           name: 'Piña Colada Lemonade',
+          price: '$4.00', // = Strawberry / Blueberry Basil Lemonade
           blurb:
             'Fresh-squeezed lemonade mixed with a house-made coconut pineapple syrup.',
         },
         {
           name: 'Dragon Fruit Lemonade',
+          price: '$4.00', // = Strawberry / Blueberry Basil Lemonade
           blurb:
             'Fresh-squeezed lemonade mixed with a house-made dragon fruit coconut syrup.',
         },
@@ -223,11 +240,13 @@ export const summerMenu: {
       items: [
         {
           name: 'Peach Cobbler Yogurt Bowl',
+          price: '$7.50', // = Yogurt Bowl
           blurb:
             'Honey Greek yogurt + house-made brown sugar cinnamon peaches + house-made streusel topping.',
         },
         {
           name: 'Summer Affogato',
+          price: '$6.00', // no analog — Espresso $3.00 + ice cream
           blurb:
             'Vanilla ice cream topped with “Feels Like Summer” blend espresso, roasted by Methodical Coffee.',
         },
@@ -745,7 +764,10 @@ function menuJsonLd() {
         '@type': 'MenuSection',
         name: summerMenu.title,
         description: summerMenu.intro,
-        // Seasonal items are names + descriptions only (no published prices).
+        // Deliberately NO `offers` here even though summerMenu now carries a
+        // `price` for /order: structured data must match what the page shows,
+        // and /menu displays the seasonal items without prices. Add offers here
+        // only if/when the printed seasonal board starts listing prices too.
         hasMenuItem: summerMenu.groups.flatMap((g) =>
           g.items.map((it) => ({ '@type': 'MenuItem', name: it.name, description: it.blurb })),
         ),

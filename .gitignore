@@ -9,6 +9,7 @@ dist/
 build/
 .next/
 out/
+.wrangler/
 .expo/
 .expo-shared/
 web-build/
@@ -27,6 +28,7 @@ android/
 .env
 .env.*
 !.env.example
+.dev.vars
 
 # Logs
 *.log
