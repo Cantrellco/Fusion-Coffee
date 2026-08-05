@@ -3,20 +3,26 @@
 // Real shop details carried over from the original site.
 // ============================================================
 
-// Base URL of the Square-hosted store (online ordering, merch product pages,
-// gift cards). Every "Order now" / merch / gift-card link derives from this.
+// Hours live in their own module (src/lib/hours.ts) because the Cloudflare
+// checkout function imports them too — it refuses orders while the shop is
+// closed. Re-exported below so the rest of the site keeps importing everything
+// from '@/lib/site' as before.
+import { TIMEZONE, hours, to24h } from './hours';
+
+// Base URL of the OLD Square-hosted store. Only one thing still derives from
+// it — `site.orderUrl`, the unused link-out fallback below. Ordering (/order)
+// and merch (/merch) are both bought on this site now, so no customer-facing
+// link points here any more.
 //
-// ⚠️ CUTOVER: today the Square store lives on www.fusioncoffeeshop.com — the
-// SAME host this new marketing site will take over. Those cannot coexist. When
-// we point www.fusioncoffeeshop.com at the new site, the Square store falls
-// back to a subdomain (branded `order.fusioncoffeeshop.com` on a paid Square
-// plan, or the free `<something>.square.site`). Change this ONE value to that
-// subdomain at cutover and every store link follows.
+// ⚠️ CUTOVER: today that Square store lives on www.fusioncoffeeshop.com — the
+// SAME host this site takes over. They cannot coexist. Anything still pointing
+// here 404s the moment DNS flips, which is exactly why the merch grid stopped
+// deep-linking to it. If the fallback is ever needed, repoint this at the
+// store's post-cutover subdomain (branded `order.fusioncoffeeshop.com` on a
+// paid Square plan, or the free `<something>.square.site`).
 //
 // Do NOT confuse this with SITE_URL (bottom of file) — that is THIS site's own
 // domain (canonical, JSON-LD, OG) and stays https://www.fusioncoffeeshop.com.
-// Verify the /s/order, /merch and /product/... paths survive on the new store
-// host before flipping DNS (Square usually preserves them).
 const SQUARE_STORE = 'https://www.fusioncoffeeshop.com';
 
 export const site = {
@@ -32,7 +38,7 @@ export const site = {
   priceRange: '$$',
   // IANA zone — every "open now" calculation is done in the shop's own time,
   // never the visitor's browser locale.
-  timezone: 'America/Chicago',
+  timezone: TIMEZONE,
 
   address: {
     street: '207 East Main Street',
@@ -50,16 +56,9 @@ export const site = {
   phoneHref: 'tel:+16185991678',
 
   // Mon–Fri 6:00 AM – 6:00 PM, Sat 6:00 AM – 4:00 PM, Sunday closed.
-  // Verified against the shop's live Google/Yelp listings (June 2026).
-  hours: [
-    { day: 'Monday', short: 'Mon', open: '6:00 AM', close: '6:00 PM' },
-    { day: 'Tuesday', short: 'Tue', open: '6:00 AM', close: '6:00 PM' },
-    { day: 'Wednesday', short: 'Wed', open: '6:00 AM', close: '6:00 PM' },
-    { day: 'Thursday', short: 'Thu', open: '6:00 AM', close: '6:00 PM' },
-    { day: 'Friday', short: 'Fri', open: '6:00 AM', close: '6:00 PM' },
-    { day: 'Saturday', short: 'Sat', open: '6:00 AM', close: '4:00 PM' },
-    { day: 'Sunday', short: 'Sun', open: null, close: null },
-  ] as { day: string; short: string; open: string | null; close: string | null }[],
+  // The table itself is in ./hours — edit it there and the pill, this list,
+  // the JSON-LD and the checkout gate all move together.
+  hours,
   hoursSummary: 'Mon–Fri 6am–6pm · Sat 6am–4pm',
 
   social: {
@@ -174,12 +173,11 @@ export const partyBooking: {
 // only — unchanged. The `price` below exists purely so /order can
 // put these in a cart, and it is the ONE place to correct them.
 //
-// ⚠️ DERIVED, NOT TRANSCRIBED. Each is set to its nearest regular-menu
-// analog (latte $5.50, cold brew $5.50, lemonade $4.00, yogurt bowl
-// $7.50; the affogato has no analog and is espresso $3.00 + ice cream).
-// Seasonal specialty drinks commonly carry a $0.50–$1.00 upcharge over
-// the base drink, so confirm each with the shop before real payments
-// go live. Square catalog sync will overwrite all of them.
+// CONFIRMED BY THE SHOP 2026-08-03 — these are the real seasonal
+// prices, no longer derived from regular-menu analogs. They run
+// $1.00 over the comparable regular drink ($6.50 vs the $5.50 latte,
+// $5.00 vs the $4.00 lemonade), which is why the earlier guesses read
+// low. Square catalog sync will eventually own these.
 // ============================================================
 export type SummerItem = { name: string; blurb: string; price: string };
 export type SummerGroup = { heading: string; items: SummerItem[] };
@@ -200,36 +198,36 @@ export const summerMenu: {
       items: [
         {
           name: 'Blueberry Latte',
-          price: '$5.50', // = Latte
+          price: '$6.50',
           blurb:
             'House-made blueberry syrup + milk of choice, topped with espresso or matcha.',
         },
         {
           name: 'Banana Pudding Latte',
-          price: '$5.50', // = Latte
+          price: '$6.50',
           blurb:
             'House-made banana syrup + milk of choice + espresso, finished with banana cold foam and wafer crumble.',
         },
         {
           name: 'Root Beer Float Flash Brew',
-          price: '$5.50', // = Cold Brew
+          price: '$6.50',
           blurb:
             'House-made root beer reduction + flash brew, topped with a vanilla cream float.',
         },
         {
           name: 'Cereal Milk Latte',
-          price: '$5.50', // = Latte
+          price: '$6.00',
           blurb: 'Fruity Pebbles–infused oat milk + espresso.',
         },
         {
           name: 'Piña Colada Lemonade',
-          price: '$4.00', // = Strawberry / Blueberry Basil Lemonade
+          price: '$5.00',
           blurb:
             'Fresh-squeezed lemonade mixed with a house-made coconut pineapple syrup.',
         },
         {
           name: 'Dragon Fruit Lemonade',
-          price: '$4.00', // = Strawberry / Blueberry Basil Lemonade
+          price: '$5.00',
           blurb:
             'Fresh-squeezed lemonade mixed with a house-made dragon fruit coconut syrup.',
         },
@@ -240,13 +238,13 @@ export const summerMenu: {
       items: [
         {
           name: 'Peach Cobbler Yogurt Bowl',
-          price: '$7.50', // = Yogurt Bowl
+          price: '$7.50',
           blurb:
             'Honey Greek yogurt + house-made brown sugar cinnamon peaches + house-made streusel topping.',
         },
         {
           name: 'Summer Affogato',
-          price: '$6.00', // no analog — Espresso $3.00 + ice cream
+          price: '$6.75',
           blurb:
             'Vanilla ice cream topped with “Feels Like Summer” blend espresso, roasted by Methodical Coffee.',
         },
@@ -415,11 +413,21 @@ export const signatures: Signature[] = [
 ];
 
 // ============================================================
-// Merch — real, in-stock goods pulled from the shop's own online
-// store (fusioncoffeeshop.com / Square). Names, photos and details
-// come straight from each live product listing; every item deep-links
-// back to its page so sizes, colors and current pricing stay current
-// at the source (checkout is handled there through Square).
+// Merch — real, in-stock goods. Names, photos, copy and grouping are
+// ours (the art direction here beats Square's listing photos); PRICES
+// AND SIZES ARE NOT. Those come from the shop's live Square catalog,
+// matched to these entries by name — see src/lib/catalog.ts.
+//
+// Nothing on this page links out any more. /merch used to deep-link
+// every card to the Square-hosted store on www.fusioncoffeeshop.com —
+// the same host this site takes over, so those links break at cutover
+// and route customers to the old site until then. Merch is now bought
+// on-site, through the same Square-backed checkout /order uses.
+//
+// `squareName` is the escape hatch for when the catalog spells an item
+// differently from the way we want to show it. Leave it off and the
+// display name is used for matching.
+//
 // Beans are guest roasters we pour and bag; tea is Kilogram Tea.
 // ============================================================
 export type MerchItem = {
@@ -428,7 +436,29 @@ export type MerchItem = {
   blurb: string;
   image: string;
   alt: string;
-  href: string;
+  /** Catalog item name, when it differs from the display name above. */
+  squareName?: string;
+  /**
+   * True when this product CANNOT be posted and must be collected in store.
+   * Only the gift card: it is activated on the register, so one dropped in a
+   * envelope would arrive worthless. Defaults to false.
+   */
+  pickupOnly?: boolean;
+  /**
+   * Who ships it WHEN IT IS SHIPPED — 'printful' means print-on-demand, made
+   * and posted by Printful straight to the customer. Defaults to 'shop'.
+   *
+   * Note the "when shipped" carefully: this is NOT a fixed property of the
+   * product. Printful only ever drop-ships, so an item COLLECTED IN STORE is
+   * always the shop's own job, pulled off the rack, no matter what this says.
+   * `resolveFulfilledBy()` in src/lib/shop.ts is what applies that rule — do
+   * not read this field directly to decide where an order goes.
+   *
+   * Confirmed by the shop 2026-08-04: ONLY the five apparel pieces are
+   * Printful. Stickers, the tote, beans, tea and the gift card are all the
+   * shop's own stock — do not assume "merch" means "print-on-demand".
+   */
+  shipsFrom?: 'printful' | 'shop';
 };
 export type MerchGroup = {
   heading: string;
@@ -437,22 +467,10 @@ export type MerchGroup = {
   items: MerchItem[];
 };
 
-// Alias of SQUARE_STORE (top of file) — every merch/product link derives from
-// it, so the cutover swap happens in one place.
-const SHOP = SQUARE_STORE;
-
 export const merch: {
-  shopUrl: string;
-  giftCardUrl: string;
   roasters: string[];
   groups: MerchGroup[];
 } = {
-  shopUrl: `${SHOP}/merch`,
-  // ⚠️ eGift cards CANNOT run on a custom domain (Square's own restriction), so
-  // after cutover this may need to become the Square-hosted eGift order-site URL
-  // (a *.square.site link from Dashboard → Items → Gift cards → eGift → Configure)
-  // rather than a /product/ page on the store subdomain. Confirm at cutover.
-  giftCardUrl: `${SHOP}/product/gift-card/BS52ODAQWGJTYQT5KBVHTIBG`,
   // Rotating roasters we feature and bag — all sold on the live shop. Includes
   // the two currently pictured (Onyx, Heart) so the roll-call and the grid agree.
   roasters: [
@@ -475,7 +493,7 @@ export const merch: {
             'Our downtown storefront, drawn in brick-and-navy across the back. Soft, heavyweight, year-round.',
           image: '/images/merch/merch-fusion-staple-hoodie.webp',
           alt: 'Sand-colored Fusion Coffee pullover hoodie with a back print of the brick storefront and navy “Fusion Coffee” sign, ESTD 2022.',
-          href: `${SHOP}/product/fusion-staple-hoodie/199`,
+          shipsFrom: 'printful',
         },
         {
           name: 'Support Your Local Hoodie',
@@ -483,28 +501,28 @@ export const merch: {
             'A retro mascot and a message we stand by, in deep navy. Heavy blend, made to live in.',
           image: '/images/merch/merch-support-your-local-hoodie.webp',
           alt: 'Navy Fusion Coffee hoodie reading “Support Your Local Coffee Shop” around a retro smiling coffee-cup mascot, Fairfield, Illinois.',
-          href: `${SHOP}/product/support-your-local-hoodie/200`,
+          shipsFrom: 'printful',
         },
         {
           name: 'Fusion Coffee Crewneck',
           blurb: 'The name, five times over, on a soft olive crew. Quietly loud.',
           image: '/images/merch/merch-fusion-coffee-crewneck.jpg',
           alt: 'Olive-green crewneck sweatshirt with “Fusion Coffee” repeated five times, the center line in solid white.',
-          href: `${SHOP}/product/fusion-coffee-crewneck/209`,
+          shipsFrom: 'printful',
         },
         {
           name: 'Support Your Local Crewneck',
           blurb: 'The same retro mascot on a sage-green crew. Support starts at home.',
           image: '/images/merch/merch-support-your-local-crewneck.webp',
           alt: 'Sage-green crewneck reading “Support Your Local Coffee Shop” around a retro coffee-cup mascot, Fairfield, Illinois.',
-          href: `${SHOP}/product/support-your-local-crewneck/198`,
+          shipsFrom: 'printful',
         },
         {
           name: 'Fusion Golden Bear Tee',
           blurb: 'A little golden bear and a Fusion cup, on a soft, garment-dyed cotton tee.',
           image: '/images/merch/merch-fusion-golden-bear-tee.jpg',
           alt: 'Natural cotton tee with a cartoon teddy bear hugging a black Fusion Coffee to-go cup.',
-          href: `${SHOP}/product/fusion-golden-bear-tee/P7TQ7MOHK6MAYNTJADZD3HRO`,
+          shipsFrom: 'printful',
         },
       ],
     },
@@ -512,34 +530,38 @@ export const merch: {
       heading: 'Stickers & carry',
       index: '02',
       blurb: 'Little things for your laptop and your weekend bag.',
+      // No can glass here on purpose — the shop discontinued it (2026-08-04).
+      // /images/merch/merch-glass.jpg is kept but unused; the glass still shows
+      // up as the vessel in drink photography and the Cold Brew blurb, which is
+      // about what we pour into on bar, not something for sale.
       items: [
         {
           name: 'The Storefront Sticker',
           blurb: 'The 207 East Main storefront, shrunk to laptop size.',
           image: '/images/merch/merch-fusion-staple-sticker.jpg',
           alt: 'Sticker of the Fusion Coffee brick storefront with the navy sign, ESTD 2022, 207 East Main Street, Fairfield, IL.',
-          href: `${SHOP}/product/fusion-staple-sticker/202`,
+          squareName: 'Fusion Staple Sticker',
         },
         {
           name: 'Support Your Local Badge',
           blurb: 'Our round “support your local” badge — flexing cup included.',
           image: '/images/merch/merch-support-your-local-sticker.jpg',
           alt: 'Round black-and-cream badge sticker reading “Support Your Local Coffee Shop” around a flexing coffee-cup mascot.',
-          href: `${SHOP}/product/support-your-local-sticker/203`,
+          squareName: 'Support Your Local Sticker',
         },
         {
           name: 'Pour-Over Sticker',
           blurb: 'A hand-drawn pour-over, kettle and coffee branch. Slow mornings, illustrated.',
           image: '/images/merch/merch-sticker.jpg',
           alt: 'Hand-drawn sticker of a pour-over Chemex and gooseneck kettle with a coffee branch reading “Support Your Local Coffee Shop, Fusion Coffee.”',
-          href: `${SHOP}/product/sticker/80`,
+          squareName: 'Sticker',
         },
         {
           name: 'Canvas Tote',
           blurb: 'Hand-made-goods canvas for beans, books and the farmers-market haul.',
           image: '/images/merch/merch-tote-bag.webp',
           alt: 'Natural canvas tote printed “Support Your Local Coffee Shop” over a coffee-cup mascot, Fusion Coffee, Fairfield, IL.',
-          href: `${SHOP}/product/tote-bag/201`,
+          squareName: 'Tote Bag',
         },
       ],
     },
@@ -554,7 +576,7 @@ export const merch: {
           blurb: 'Milk chocolate, plum and candied walnuts. Juicy, with a twist of citrus oil.',
           image: '/images/merch/merch-onyx-southern-weather.jpg',
           alt: 'Onyx Coffee Lab “Southern Weather” bean box in charcoal with embossed botanical artwork.',
-          href: `${SHOP}/product/onyx-southern-weather/89`,
+          squareName: 'Onyx Southern Weather',
         },
         {
           name: 'Tropical Weather',
@@ -562,7 +584,7 @@ export const merch: {
           blurb: 'Mixed berries, sweet tea, raw honey and plum. Bright and easy-drinking.',
           image: '/images/merch/merch-onyx-tropical-weather.jpg',
           alt: 'Onyx Coffee Lab “Tropical Weather” bean box in lavender with embossed botanical artwork.',
-          href: `${SHOP}/product/onyx-tropical-weather/91`,
+          squareName: 'Onyx Tropical Weather',
         },
         {
           name: 'Stereo Blend',
@@ -570,7 +592,6 @@ export const merch: {
           blurb: 'A seasonal blend — tasting notes shift with the harvest. Whole bean, 16 oz.',
           image: '/images/merch/merch-stereo-blend.jpg',
           alt: 'Silver foil bag of Heart Coffee Roasters “Stereo Blend” whole-bean coffee, 16 oz.',
-          href: `${SHOP}/product/stereo-blend/88`,
         },
       ],
     },
@@ -585,7 +606,7 @@ export const merch: {
           blurb: 'A caffeine-free herbal tisane — peppermint, lavender and chamomile.',
           image: '/images/merch/merch-organic-blend-333-box.jpg',
           alt: 'Kilogram Tea “Organic Blend 333” loose-leaf herbal tisane in purple packaging.',
-          href: `${SHOP}/product/organic-blend-333-box/58`,
+          squareName: 'Organic Blend 333 Box',
         },
         {
           name: 'Organic Earl Grey',
@@ -593,7 +614,7 @@ export const merch: {
           blurb: 'Loose-leaf black tea — malty and balanced with the citrus of bergamot.',
           image: '/images/merch/merch-organic-earl-grey-box.jpg',
           alt: 'Kilogram Tea “Organic Earl Grey” loose-leaf black tea in red packaging.',
-          href: `${SHOP}/product/organic-earl-grey-box/57`,
+          squareName: 'Organic Earl Grey Box',
         },
         {
           name: 'Organic Jasmine Peach',
@@ -601,7 +622,30 @@ export const merch: {
           blurb: 'Loose-leaf white tea with jasmine and ripe peach. Soft and floral.',
           image: '/images/merch/merch-organic-jasmine-peach.jpg',
           alt: 'Kilogram Tea “Organic Jasmine Peach” loose-leaf white tea in blue packaging.',
-          href: `${SHOP}/product/organic-jasmine-peach/59`,
+        },
+      ],
+    },
+    {
+      // Sold as an ordinary product, picked up at the counter: the customer
+      // pays here, staff load the card on the register when they collect it.
+      //
+      // This is deliberate, not a shortcut. Square's eGift checkout CANNOT run
+      // on a custom domain — it only lives on a *.square.site host — so the
+      // only way to keep the whole purchase on fusioncoffeeshop.com is to sell
+      // the physical card. Denominations come from the catalog like every other
+      // price, so the shop controls which amounts are offered.
+      heading: 'Gift cards',
+      index: '05',
+      blurb:
+        'Good for everything on this page and every drink on the board. Pick it up at the counter and we’ll load it while you wait.',
+      items: [
+        {
+          name: 'Fusion Gift Card',
+          blurb:
+            'Choose an amount — $10 to $100 — pay here, and collect the card at the shop. We activate it at the register.',
+          image: '/images/merch/merch-gift-card.jpg',
+          alt: 'Fusion Coffee gift card — charcoal logo panel beside a “a gift for you” card — propped on a saucer on the counter.',
+          pickupOnly: true,
         },
       ],
     },
@@ -634,74 +678,14 @@ export const logo = {
 };
 
 // ============================================================
-// Time helpers + "open now" logic — one source of truth, shared
-// by the OpenStatus pill and the structured data. All reasoning
-// is in the shop's local time (site.timezone), never the visitor's.
+// Time helpers + "open now" logic — all of it now lives in ./hours
+// (the checkout Worker imports that module too, so it must stay free
+// of anything Next-specific). Re-exported here so existing callers
+// keep importing from '@/lib/site'. All reasoning is in the shop's
+// local time (site.timezone), never the visitor's.
 // ============================================================
-
-// "6:00 AM" / "4:00 PM" -> minutes past midnight (e.g. 360 / 960).
-export function parseClock(t: string): number {
-  const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!m) return 0;
-  let h = parseInt(m[1], 10) % 12;
-  if (/pm/i.test(m[3])) h += 12;
-  return h * 60 + parseInt(m[2], 10);
-}
-
-// "6:00 AM" -> "06:00", "6:00 PM" -> "18:00" — the 24h form Schema.org wants.
-export function to24h(t: string): string {
-  const mins = parseClock(t);
-  const h = String(Math.floor(mins / 60)).padStart(2, '0');
-  const m = String(mins % 60).padStart(2, '0');
-  return `${h}:${m}`;
-}
-
-export type OpenStatus = {
-  open: boolean;
-  /** Short status line, e.g. "Open now · closes 6pm" or "Closed · opens 6am". */
-  label: string;
-};
-
-// "6:00 PM" -> "6pm", "6:30 AM" -> "6:30am" — compact for the pill.
-function compactClock(t: string): string {
-  const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!m) return t.toLowerCase();
-  const min = m[2] === '00' ? '' : `:${m[2]}`;
-  return `${parseInt(m[1], 10)}${min}${m[3].toLowerCase()}`;
-}
-
-/**
- * Resolve open/closed for a given shop-local weekday + minute-of-day. Pure, so
- * the component can feed it an Intl-derived "now" and stay trivial. When closed,
- * it points at the next opening so the pill always answers "...so when?".
- */
-export function openStatusFor(weekday: string, minutesNow: number): OpenStatus {
-  const today = site.hours.find((h) => h.day === weekday);
-
-  if (today?.open && today.close) {
-    const open = parseClock(today.open);
-    const close = parseClock(today.close);
-    if (minutesNow >= open && minutesNow < close) {
-      return { open: true, label: `Open now · closes ${compactClock(today.close)}` };
-    }
-    if (minutesNow < open) {
-      return { open: false, label: `Closed · opens ${compactClock(today.open)}` };
-    }
-  }
-
-  // Closed for the day (already past close, or a no-hours day like Sunday).
-  // Walk forward to the next day that has opening hours.
-  const order = site.hours;
-  const idx = order.findIndex((h) => h.day === weekday);
-  for (let step = 1; step <= 7; step += 1) {
-    const next = order[(idx + step) % 7];
-    if (next?.open) {
-      const when = step === 1 ? 'tomorrow' : next.short;
-      return { open: false, label: `Closed · opens ${when} ${compactClock(next.open)}` };
-    }
-  }
-  return { open: false, label: 'Closed' };
-}
+export { parseClock, to24h, openStatusFor, nowInShop, shopOpenStatus } from './hours';
+export type { OpenStatus, DayHours } from './hours';
 
 // ============================================================
 // Structured data (JSON-LD) — a CafeOrCoffeeShop graph + its Menu,

@@ -13,18 +13,40 @@
 // / CatalogModifierList into the exact same shape below, so none of the UI
 // changes. `squareCatalogObjectId` is carried on each item/modifier for that
 // day (the Orders API needs it to build a real order); it is null until then.
-// Modifier upcharges are $0 here (the shop lists flavors as free add-ons); real
-// modifier pricing will arrive from the Square catalog.
 // ============================================================
 
 import { regularMenu, summerMenu } from './site';
+
+/**
+ * One choice inside a modifier group. `priceCents` is an upcharge ADDED to the
+ * line's unit price — omitted means free.
+ */
+export type OrderModifierOption = {
+  /** Canonical name — what the cart, the Square note and the barista see. */
+  value: string;
+  /**
+   * Optional label for the dropdown only. The group's name is visually hidden
+   * (screen readers get it via aria-label), so a bare "None" or "Regular" in a
+   * row of four dropdowns tells the customer nothing — these spell it out.
+   * Never sent anywhere; `value` stays canonical.
+   */
+  display?: string;
+  /**
+   * "I didn't pick anything" — no milk, no flavor, no extra shot. These are
+   * dropped from the cart line and the barista's note, so a plain latte doesn't
+   * read "Iced · Regular · None". Free by definition.
+   */
+  noop?: boolean;
+  priceCents?: number;
+};
 
 export type OrderModifierGroup = {
   id: string;
   label: string;
   /** When true the customer must pick one; we default to the first option. */
   required?: boolean;
-  options: string[];
+  /** First option is the default the UI preselects — always keep it free. */
+  options: OrderModifierOption[];
 };
 
 export type OrderItem = {
@@ -58,20 +80,85 @@ function slug(s: string): string {
     .replace(/(^-|-$)/g, '');
 }
 
-// Milk + flavor mirror the real menu, where flavors are free add-ons
-// ("Add to any drink") — so no upcharge is invented here.
+// ---- Modifier groups + real upcharges (confirmed by the shop 2026-08-03) ----
+//
+// Every group leads with a FREE option, because the UI preselects the first
+// one: nobody is ever charged for a modifier they did not actively pick.
+//
+// NOTE: the flavor list here is the ORDERING list, which is shorter than the
+// printed in-shop board (`regularMenu.flavors` — that one also carries Maple
+// and Brown Sugar (SF)). /menu still shows the full board; only these five are
+// orderable online. Add the other two here if the shop wants them online.
+
 const MILK: OrderModifierGroup = {
   id: 'milk',
   label: 'Milk',
-  required: true,
-  options: ['Whole', '2%', 'Oat', 'Almond', 'Nonfat'],
+  options: [
+    { value: 'Whole', display: 'Whole milk' },
+    { value: 'Skim', display: 'Skim milk' },
+    { value: 'Oat', display: 'Oat milk', priceCents: 100 },
+    { value: 'Almond', display: 'Almond milk', priceCents: 100 },
+    { value: 'None', display: 'No milk', noop: true },
+  ],
 };
 
 const FLAVOR: OrderModifierGroup = {
   id: 'flavor',
   label: 'Flavor',
-  options: ['None', ...regularMenu.flavors],
+  options: [
+    { value: 'None', display: 'No flavor', noop: true },
+    { value: 'Caramel', priceCents: 50 },
+    { value: 'Mocha', priceCents: 50 },
+    { value: 'Honey Cinnamon', priceCents: 50 },
+    { value: 'Cuban', priceCents: 50 },
+    { value: 'Vanilla', priceCents: 50 },
+    { value: 'Maple', priceCents: 50 },
+    // Named exactly as the printed board spells it, so the barista ticket and
+    // the wall menu agree. `display` spells out the abbreviation, because "(SF)"
+    // in a dropdown is not obvious to anyone who has not read the board.
+    {
+      value: 'Brown Sugar (SF)',
+      display: 'Brown sugar — sugar free',
+      priceCents: 50,
+    },
+  ],
 };
+
+const EXTRA_SHOT: OrderModifierGroup = {
+  id: 'shot',
+  label: 'Extra Shot',
+  options: [
+    { value: 'Regular', display: 'No extra shot', noop: true },
+    { value: 'Extra Shot of Espresso', display: 'Extra shot', priceCents: 100 },
+  ],
+};
+
+const TEMP: OrderModifierGroup = {
+  id: 'temp',
+  label: 'Hot or Iced',
+  options: [{ value: 'Iced' }, { value: 'Hot' }],
+};
+
+// Which groups an item gets. Milk and Extra Shot cost money now, so they are
+// kept off drinks they make no sense on — a $1.00 oat-milk upcharge on a
+// lemonade would be a real overcharge, not just an odd option.
+const isLemonade = (name: string) => /lemonade/i.test(name);
+/** Espresso- or brew-based, so an extra shot is a real thing to sell. */
+const takesEspresso = (name: string, blurb = '') =>
+  /espresso|brew|latte|americano|cortado|cappuccino|macchiato/i.test(
+    `${name} ${blurb}`,
+  );
+
+function drinkModifiers(name: string, blurb = ''): OrderModifierGroup[] {
+  // Plain milk (the $2.50 carton) is a drink, not a build — no options on it,
+  // so it never asks "what milk?" about a glass of milk.
+  if (name === 'Milk') return [];
+  const groups: OrderModifierGroup[] = [TEMP];
+  if (!isLemonade(name)) groups.push(MILK);
+  groups.push(FLAVOR);
+  if (takesEspresso(name, blurb)) groups.push(EXTRA_SHOT);
+  return groups;
+}
 
 export const orderMenu: OrderCategory[] = [
   // Seasonal first — /menu leads with the Summer Menu, so /order does too.
@@ -89,12 +176,15 @@ export const orderMenu: OrderCategory[] = [
       name: it.name,
       priceCents: toCents(it.price),
       description: it.blurb,
-      ...(/drink/i.test(group.heading) ? { modifiers: [MILK, FLAVOR] } : {}),
+      ...(/drink/i.test(group.heading)
+        ? { modifiers: drinkModifiers(it.name, it.blurb) }
+        : {}),
       squareCatalogObjectId: null,
     })),
   })),
 
-  // Drinks: coffee + non-coffee get milk & flavor; tea keeps flavor only.
+  // Drinks: same rules as the seasonal bar — temperature on everything, milk
+  // and an extra shot only where they apply, flavor everywhere.
   ...regularMenu.drinks.map((group) => ({
     id: slug(group.heading),
     heading: group.heading,
@@ -102,7 +192,8 @@ export const orderMenu: OrderCategory[] = [
       id: slug(it.name),
       name: it.name,
       priceCents: toCents(it.price),
-      modifiers: group.heading === 'Tea' ? [FLAVOR] : [MILK, FLAVOR],
+      modifiers:
+        group.heading === 'Tea' ? [TEMP, FLAVOR] : drinkModifiers(it.name),
       squareCatalogObjectId: null,
     })),
   })),
@@ -147,18 +238,33 @@ export function formatCents(cents: number): string {
 
 // ---- Cart line shape (shared by the UI and the checkout payload) ----
 
-export type CartModifier = { groupId: string; label: string; value: string };
+export type CartModifier = {
+  groupId: string;
+  label: string;
+  value: string;
+  /** Upcharge for this choice, already folded into the line's priceCents. */
+  priceCents: number;
+};
 
 export type CartLine = {
   /** Stable key = item id + chosen modifiers, so identical builds stack. */
   key: string;
   itemId: string;
   name: string;
+  /** UNIT price: the item's base price plus every modifier upcharge. */
   priceCents: number;
   qty: number;
   modifiers: CartModifier[];
   squareCatalogObjectId?: string | null;
 };
+
+/** Base price + every chosen upcharge = what one of this build costs. */
+export function unitPriceCents(
+  basePriceCents: number,
+  modifiers: CartModifier[],
+): number {
+  return modifiers.reduce((sum, m) => sum + (m.priceCents || 0), basePriceCents);
+}
 
 export function lineKey(itemId: string, modifiers: CartModifier[]): string {
   const mods = modifiers

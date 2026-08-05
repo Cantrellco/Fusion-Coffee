@@ -1,0 +1,1037 @@
+{
+  "syncedAt": "2026-08-05T20:03:06.244Z",
+  "environment": "production",
+  "products": [
+    {
+      "squareItemId": "WLDU7XLDAVV2EOYXEKZZ4TQX",
+      "name": "Fusion Coffee Crewneck",
+      "description": null,
+      "categories": [
+        "Items"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/478331c49577a62b9dba8463c9c04330331cb5b7/original.png",
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/2e6bbf74ccf8617e1e620254f0f21ec1474f8ba3/original.png"
+      ],
+      "variations": [
+        {
+          "id": "Q35EFZ77CRJQTYV72YGOEN5K",
+          "name": "Regular",
+          "priceCents": 3000,
+          "sku": null,
+          "ordinal": 1,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "XAMX65HWZEXE3UOIAHNK7SYC",
+      "name": "Fusion Coffee Crewneck",
+      "description": "A sturdy and warm sweatshirt bound to keep you warm in the colder months. A pre-shrunk, classic fit sweater that’s made with air-jet spun yarn for a soft feel.\n\n\n• 50% cotton, 50% polyester\n\n• Pre-shrunk\n\n• Classic fit\n\n• 1x1 athletic rib knit collar with spandex\n\n• Air-jet spun yarn with a soft feel\n\n• Double-needle stitched collar, shoulders, armholes, cuffs, and hem\n\n\nThis product is made especially for you as soon as you place an order, which is why it takes us a bit longer to deliver it to you. Making products on demand instead of in bulk helps reduce overproduction, so thank you for making thoughtful purchasing decisions!",
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/2ecd00b536f788155de762d7fef6f068bf7519d2/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "2XA3PMDIJHID3A2NRXW56MUQ",
+          "name": "S",
+          "priceCents": 3000,
+          "sku": "66FB0E9DDB18B_13005",
+          "ordinal": 0,
+          "variablePricing": false
+        },
+        {
+          "id": "O44S3OO2LIMHQ7XSOYGLHEOD",
+          "name": "M",
+          "priceCents": 3000,
+          "sku": "66FB0E9DDB18B_13006",
+          "ordinal": 1,
+          "variablePricing": false
+        },
+        {
+          "id": "O6P45CX43WM44WN5BUCKREDD",
+          "name": "L",
+          "priceCents": 3000,
+          "sku": "66FB0E9DDB18B_13007",
+          "ordinal": 2,
+          "variablePricing": false
+        },
+        {
+          "id": "VYVGM5VEAGEMPFN2VEHGOWGK",
+          "name": "XL",
+          "priceCents": 3000,
+          "sku": "66FB0E9DDB18B_13008",
+          "ordinal": 3,
+          "variablePricing": false
+        },
+        {
+          "id": "KZNGMAHUQUOCYCQAVITRW73R",
+          "name": "2XL",
+          "priceCents": 3000,
+          "sku": "66FB0E9DDB18B_13009",
+          "ordinal": 4,
+          "variablePricing": false
+        },
+        {
+          "id": "CD7FOOTPM6LP3P6GKY3WYDLP",
+          "name": "3XL",
+          "priceCents": 3000,
+          "sku": "66FB0E9DDB18B_13010",
+          "ordinal": 5,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "FDB3HBJ5AJVZO24PJEF4ASQP",
+      "name": "Fusion Coffee Crewneck",
+      "description": "A sturdy and warm sweatshirt bound to keep you warm in the colder months. A pre-shrunk, classic fit sweater that’s made with air-jet spun yarn for a soft feel.\n\n\n• 50% cotton, 50% polyester\n\n• Pre-shrunk\n\n• Classic fit\n\n• 1x1 athletic rib knit collar with spandex\n\n• Air-jet spun yarn with a soft feel\n\n• Double-needle stitched collar, shoulders, armholes, cuffs, and hem\n\n\nThis product is made especially for you as soon as you place an order, which is why it takes us a bit longer to deliver it to you. Making products on demand instead of in bulk helps reduce overproduction, so thank you for making thoughtful purchasing decisions!",
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/c933c5da2979adf8c7441f100f2bd5dadb1e517c/original.jpeg",
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/2ecd00b536f788155de762d7fef6f068bf7519d2/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "JJ7Q5M74H7X6IBSECMLMWQ22",
+          "name": "Black, S",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_5434",
+          "ordinal": 0,
+          "variablePricing": false
+        },
+        {
+          "id": "7ELUFIS3K5DMDJZ4BNY4ALQU",
+          "name": "Black, M",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_5435",
+          "ordinal": 1,
+          "variablePricing": false
+        },
+        {
+          "id": "4YWQBEKW43C7EDPPBDH2CNKE",
+          "name": "Black, L",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_5436",
+          "ordinal": 2,
+          "variablePricing": false
+        },
+        {
+          "id": "3RSHJRRS54BYFDYZBSULHCXV",
+          "name": "Black, XL",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_5437",
+          "ordinal": 3,
+          "variablePricing": false
+        },
+        {
+          "id": "R4DYR6ZI6DOQYZNWJMVLWTM4",
+          "name": "Black, 2XL",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_5438",
+          "ordinal": 4,
+          "variablePricing": false
+        },
+        {
+          "id": "UEUVIPBUBFT75STHIV42TPLY",
+          "name": "Black, 3XL",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_5439",
+          "ordinal": 5,
+          "variablePricing": false
+        },
+        {
+          "id": "L6IV2BBCQUK4S37EJMTFGBYO",
+          "name": "Black, 4XL",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_5440",
+          "ordinal": 6,
+          "variablePricing": false
+        },
+        {
+          "id": "4WGH2IZFM6BEJ4SGSO7EYQ4N",
+          "name": "Black, 5XL",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_5441",
+          "ordinal": 7,
+          "variablePricing": false
+        },
+        {
+          "id": "G53KSUE3OQJIM6XEXGEKAP2C",
+          "name": "Military Green, S",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_13005",
+          "ordinal": 8,
+          "variablePricing": false
+        },
+        {
+          "id": "WDME2EXALGFMLM4M3362DC4I",
+          "name": "Military Green, M",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_13006",
+          "ordinal": 9,
+          "variablePricing": false
+        },
+        {
+          "id": "EECIMZATI2ITNPWUHSHSECLL",
+          "name": "Military Green, L",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_13007",
+          "ordinal": 10,
+          "variablePricing": false
+        },
+        {
+          "id": "7T6P45RJNYLQ6AXYHHR7TR5Z",
+          "name": "Military Green, XL",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_13008",
+          "ordinal": 11,
+          "variablePricing": false
+        },
+        {
+          "id": "4QPZ5U4USMKSLJVNWJ3W2YE6",
+          "name": "Military Green, 2XL",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_13009",
+          "ordinal": 12,
+          "variablePricing": false
+        },
+        {
+          "id": "WMIMICWMQWAU5VIQRW3XZVO4",
+          "name": "Military Green, 3XL",
+          "priceCents": 3000,
+          "sku": "66FB105948CE5_13010",
+          "ordinal": 13,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "53CLLRTWEQ3HQYZZY3Z5GBNF",
+      "name": "Fusion Gift Card",
+      "description": "Gift card redeemable in store. Purchased online, activated at the register on collection.",
+      "categories": [],
+      "images": [],
+      "variations": [
+        {
+          "id": "QBHAZTMRLYMFUDRHNGPIBCNJ",
+          "name": "$10",
+          "priceCents": 1000,
+          "sku": null,
+          "ordinal": 0,
+          "variablePricing": false
+        },
+        {
+          "id": "7MSQEBSTDLG4LQCBCJG4CO64",
+          "name": "$25",
+          "priceCents": 2500,
+          "sku": null,
+          "ordinal": 1,
+          "variablePricing": false
+        },
+        {
+          "id": "OS65WR4TVK3JNEK2RZTXMXAA",
+          "name": "$50",
+          "priceCents": 5000,
+          "sku": null,
+          "ordinal": 2,
+          "variablePricing": false
+        },
+        {
+          "id": "WYM4ZTYSXIA5OK4AOZ2I4CNC",
+          "name": "$100",
+          "priceCents": 10000,
+          "sku": null,
+          "ordinal": 3,
+          "variablePricing": false
+        },
+        {
+          "id": "5SFUKGNANUUPY6QDYIOFNURT",
+          "name": "$250",
+          "priceCents": 25000,
+          "sku": null,
+          "ordinal": 4,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "P7TQ7MOHK6MAYNTJADZD3HRO",
+      "name": "Fusion Golden Bear Tee",
+      "description": "If you’re looking for a thick, structured tee that’s also super soft and breathable—look no further! The unisex garment-dyed heavyweight t-shirt ticks all the boxes and is made of 100% ring-spun cotton. The regular t-shirt style will complement most looks and fit you to a tee.\n\n\n• 100% ring-spun cotton\n\n• Fabric weight: 6.1 oz/yd² (206.8 g/m²)\n\n• Garment-dyed\n\n• Relaxed fit\n\n• 7/8″ double-needle topstitched collar\n\n• Twill-taped neck and shoulders for extra durability\n\n• Double-needle armhole, sleeve, and bottom hems\n\n• Blank product sourced from Honduras\n\n\nThis product is made especially for you as soon as you place an order, which is why it takes us a bit longer to deliver it to you. Making products on demand instead of in bulk helps reduce overproduction, so thank you for making thoughtful purchasing decisions!",
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/2ce308c2c22848f05c31c73f89927da7dc9bf34d/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "QGKMCFH763VVS5CTDAX5Y3G5",
+          "name": "S",
+          "priceCents": 3000,
+          "sku": "69E656A718913_16523",
+          "ordinal": 0,
+          "variablePricing": false
+        },
+        {
+          "id": "45HZ7Y3FACYEFT3FEULMVFXU",
+          "name": "M",
+          "priceCents": 3000,
+          "sku": "69E656A718913_16524",
+          "ordinal": 1,
+          "variablePricing": false
+        },
+        {
+          "id": "WMV4YEUB37S3OJFBKQDNF7ZX",
+          "name": "L",
+          "priceCents": 3000,
+          "sku": "69E656A718913_16525",
+          "ordinal": 2,
+          "variablePricing": false
+        },
+        {
+          "id": "7TFGY45V3XB5TQMDZIIYVKOU",
+          "name": "XL",
+          "priceCents": 3000,
+          "sku": "69E656A718913_16526",
+          "ordinal": 3,
+          "variablePricing": false
+        },
+        {
+          "id": "XSAV4SIOWAHY7HECHJHILMNI",
+          "name": "2XL",
+          "priceCents": 3000,
+          "sku": "69E656A718913_16527",
+          "ordinal": 4,
+          "variablePricing": false
+        },
+        {
+          "id": "YBIKVGR57E6ZHJAHF3OHJ4W7",
+          "name": "3XL",
+          "priceCents": 3000,
+          "sku": "69E656A718913_16528",
+          "ordinal": 5,
+          "variablePricing": false
+        },
+        {
+          "id": "VJYAJBDNAJH2WGJJPCZFMGLH",
+          "name": "4XL",
+          "priceCents": 3000,
+          "sku": "69E656A718913_17507",
+          "ordinal": 6,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "BQN4G33EWX5WMWSZ5RFSSXOR",
+      "name": "Fusion Staple Hoodie",
+      "description": null,
+      "categories": [
+        "Seasonal Drinks",
+        "Items"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/b0dd4b8c14f43cfe2b48d2ac3fde4f541bb2b5eb/original.png",
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/53e729037c46f928fcee3f8cf9ac53f10cf7eac5/original.png"
+      ],
+      "variations": [
+        {
+          "id": "2JKAMRDKBRSN7RMW7C4I542Y",
+          "name": "Regular",
+          "priceCents": 3500,
+          "sku": null,
+          "ordinal": 0,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "PTEWWBW7NPV5ZG7SWEPXIREK",
+      "name": "Fusion Staple Hoodie",
+      "description": "Everyone needs a cozy go-to hoodie to curl up in, so go for one that's soft, smooth, and stylish. It's the perfect choice for cooler evenings!\n\n\n• 50% pre-shrunk cotton, 50% polyester\n\n• Fabric weight: 8.0 oz/yd² (271.25 g/m²)\n\n• Air-jet spun yarn with a soft feel and reduced pilling\n\n• Double-lined hood with matching drawcord\n\n• Quarter-turned body to avoid crease down the middle\n\n• 1 × 1 athletic rib-knit cuffs and waistband with spandex\n\n• Front pouch pocket\n\n• Double-needle stitched collar, shoulders, armholes, cuffs, and hem\n\n• Blank product sourced from Bangladesh, Nicaragua, Honduras or El Salvador\n\n\nThis product is made especially for you as soon as you place an order, which is why it takes us a bit longer to deliver it to you. Making products on demand instead of in bulk helps reduce overproduction, so thank you for making thoughtful purchasing decisions!",
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/e9a7e97299b655c519007d2b1c76df081352e7cc/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "KIZBKVADLIEQGP3KIVWRPSF7",
+          "name": "S",
+          "priceCents": 3500,
+          "sku": "66FB0D86AB2CD_12997",
+          "ordinal": 0,
+          "variablePricing": false
+        },
+        {
+          "id": "JZG2AH7BSUVKKFKXHWEMEYYQ",
+          "name": "M",
+          "priceCents": 3500,
+          "sku": "66FB0D86AB2CD_12998",
+          "ordinal": 1,
+          "variablePricing": false
+        },
+        {
+          "id": "4XS7Y5EECXRMMM6SM2DORIG3",
+          "name": "L",
+          "priceCents": 3500,
+          "sku": "66FB0D86AB2CD_12999",
+          "ordinal": 2,
+          "variablePricing": false
+        },
+        {
+          "id": "VWWPRN2DJGBSIBHZCCPIFMGA",
+          "name": "XL",
+          "priceCents": 3500,
+          "sku": "66FB0D86AB2CD_13000",
+          "ordinal": 3,
+          "variablePricing": false
+        },
+        {
+          "id": "HLQ2QNWSW6OFGC3G5VEENSCW",
+          "name": "2XL",
+          "priceCents": 3500,
+          "sku": "66FB0D86AB2CD_13001",
+          "ordinal": 4,
+          "variablePricing": false
+        },
+        {
+          "id": "LGLC34WSHQPY7BSC3TCVIVBA",
+          "name": "3XL",
+          "priceCents": 3500,
+          "sku": "66FB0D86AB2CD_13002",
+          "ordinal": 5,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "P4CBR5XMKO2SNXJMI5NQLLJJ",
+      "name": "Fusion Staple Sticker",
+      "description": null,
+      "categories": [
+        "Seasonal Drinks",
+        "Items"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/bd2be01beff702fc839387bf62c70f97dbbde741/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "BH7AYWQ7MWMNZJAZHLKQRJJK",
+          "name": "Regular",
+          "priceCents": 300,
+          "sku": null,
+          "ordinal": 0,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "PTPK6IO5EV5ZBJCIWTNKP55D",
+      "name": "Onyx Southern Weather",
+      "description": null,
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/d1c83698268b7cdaa493e36e71fdf54a547c5605/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "DHZHPQ6OUHON53EM3KBTTRGX",
+          "name": "Regular",
+          "priceCents": 1750,
+          "sku": null,
+          "ordinal": 1,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "P2E3KVDHHIGBYRJUYVWN32XV",
+      "name": "Onyx Tropical Weather",
+      "description": null,
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/fb5cf92018f0423315e818db5d9450a546a544b7/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "SZO77C5B33DTYVBUKIGMQQFO",
+          "name": "Regular",
+          "priceCents": 2200,
+          "sku": null,
+          "ordinal": 1,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "X53ZGIS6PXE4HPBG5KSIP2KO",
+      "name": "Organic Blend 333 Box",
+      "description": null,
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/40fc47f64addb4f1d237ae5029b433b135e33c34/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "KPCNSF3EDGBWXFKSTWS4FLCX",
+          "name": "Regular",
+          "priceCents": 899,
+          "sku": null,
+          "ordinal": 1,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "2Y2PP2D73QO3QX3JD75HBECT",
+      "name": "Organic Earl Grey Box",
+      "description": null,
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/fdabb0fb0cb201cbb66d4324e5a1441e172128c6/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "JULDHXKECNO3R5XKQUCZYV3C",
+          "name": "Regular",
+          "priceCents": 1099,
+          "sku": null,
+          "ordinal": 1,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "F5PPGB43KLSG6OCQPIG36MJZ",
+      "name": "Organic Jasmine Peach",
+      "description": null,
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/14c77c599c32cb8986f51bb588dfe439010edcc0/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "UOOURQQV45UK6HAUT3PFHQCT",
+          "name": "Regular",
+          "priceCents": 1099,
+          "sku": null,
+          "ordinal": 1,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "V4I5F7N23TWRE2B672ZNFTWR",
+      "name": "Stereo blend",
+      "description": null,
+      "categories": [
+        "Retail",
+        "Items"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/e6a3edd8aad1934f83b67336737f93e767ed8bd3/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "QPK6NZAIIL7LBXXF6CPH4L5H",
+          "name": "Regular",
+          "priceCents": 2400,
+          "sku": null,
+          "ordinal": 1,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "MNKMHMEMWILR34AQPUJQTGND",
+      "name": "Sticker",
+      "description": null,
+      "categories": [
+        "Retail",
+        "Items"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/bb6555e37ea0cf3dc06b4b78c1a018daa1e55a39/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "LE7IN4SBFUBNTUOR3YDCW6EO",
+          "name": "Regular",
+          "priceCents": 300,
+          "sku": null,
+          "ordinal": 1,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "BYOSRMCEFHCKFQQO2FOSG5ZV",
+      "name": "Support Your Local Crewneck",
+      "description": null,
+      "categories": [
+        "Items"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/5c8d280992a1848cc1d5d80741e944d0437d6892/original.png",
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/787c6f04610760dd9077d9154b571ccaa279368c/original.png"
+      ],
+      "variations": [
+        {
+          "id": "SYSJCRR2KHVBTJ3TPEQLZP6D",
+          "name": "Regular",
+          "priceCents": 3000,
+          "sku": null,
+          "ordinal": 0,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "5XHQHUWRTGIXF3Z5QAKZ4MLF",
+      "name": "Support Your Local Crewneck",
+      "description": "A sturdy and warm sweatshirt bound to keep you warm in the colder months. A pre-shrunk, classic fit sweater that’s made with air-jet spun yarn for a soft feel.\n\n\n• 50% cotton, 50% polyester\n\n• Pre-shrunk\n\n• Classic fit\n\n• 1x1 athletic rib knit collar with spandex\n\n• Air-jet spun yarn with a soft feel\n\n• Double-needle stitched collar, shoulders, armholes, cuffs, and hem\n\n\nThis product is made especially for you as soon as you place an order, which is why it takes us a bit longer to deliver it to you. Making products on demand instead of in bulk helps reduce overproduction, so thank you for making thoughtful purchasing decisions!",
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/a81743298e169dfce343f7ec0bafcb5fee95b9c5/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "7ON3M6DTTNC5S6L3SEFJEH2P",
+          "name": "S",
+          "priceCents": 3000,
+          "sku": "66FB0CC9720FE_13005",
+          "ordinal": 0,
+          "variablePricing": false
+        },
+        {
+          "id": "ZB6LBE54ZP55U7ZT7H67RRCO",
+          "name": "M",
+          "priceCents": 3000,
+          "sku": "66FB0CC9720FE_13006",
+          "ordinal": 1,
+          "variablePricing": false
+        },
+        {
+          "id": "A5K45WWZMK7SMLSUQNFH5JTY",
+          "name": "L",
+          "priceCents": 3000,
+          "sku": "66FB0CC9720FE_13007",
+          "ordinal": 2,
+          "variablePricing": false
+        },
+        {
+          "id": "7EUSNVXZ6AS5M2XGNVNDKVLP",
+          "name": "XL",
+          "priceCents": 3000,
+          "sku": "66FB0CC9720FE_13008",
+          "ordinal": 3,
+          "variablePricing": false
+        },
+        {
+          "id": "GK4372Z4ZCFEADWZ7J36GCHV",
+          "name": "2XL",
+          "priceCents": 3000,
+          "sku": "66FB0CC9720FE_13009",
+          "ordinal": 4,
+          "variablePricing": false
+        },
+        {
+          "id": "4FNAZVNLB7HOLZSUPJMROUR6",
+          "name": "3XL",
+          "priceCents": 3000,
+          "sku": "66FB0CC9720FE_13010",
+          "ordinal": 5,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "GZFC63NR3MQVKDNBII7J4D4C",
+      "name": "Support Your Local Hoodie",
+      "description": null,
+      "categories": [
+        "Items"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/050ea1c87e3a2f5cc2a5652a2399a9a3ef93bb4c/original.png",
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/7eda71b1ddc9e80e09f52ba4e2d183fc84f04774/original.png"
+      ],
+      "variations": [
+        {
+          "id": "SSEXSJEVYMBZFYXJP2PDRBIV",
+          "name": "Regular",
+          "priceCents": 3500,
+          "sku": null,
+          "ordinal": 0,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "UDK3TTUKO5BIRXEF4J6IUK6O",
+      "name": "Support Your Local Hoodie",
+      "description": "Everyone needs a cozy go-to hoodie to curl up in, so go for one that's soft, smooth, and stylish. It's the perfect choice for cooler evenings!\n\n\n• 50% pre-shrunk cotton, 50% polyester\n\n• Fabric weight: 8.0 oz/yd² (271.25 g/m²)\n\n• Air-jet spun yarn with a soft feel and reduced pilling\n\n• Double-lined hood with matching drawcord\n\n• Quarter-turned body to avoid crease down the middle\n\n• 1 × 1 athletic rib-knit cuffs and waistband with spandex\n\n• Front pouch pocket\n\n• Double-needle stitched collar, shoulders, armholes, cuffs, and hem\n\n• Blank product sourced from Bangladesh, Nicaragua, Honduras or El Salvador\n\n\nThis product is made especially for you as soon as you place an order, which is why it takes us a bit longer to deliver it to you. Making products on demand instead of in bulk helps reduce overproduction, so thank you for making thoughtful purchasing decisions!",
+      "categories": [
+        "Merchandise"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/0b4bd69b045520e80137f29e47d6488f69b1250e/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "6MEP6GC3A5KZOJNQL2NWC2DS",
+          "name": "S",
+          "priceCents": 3500,
+          "sku": "66FB0E0599233_5594",
+          "ordinal": 0,
+          "variablePricing": false
+        },
+        {
+          "id": "TIP3ICSZ3LWVOBBWVUJAYLMO",
+          "name": "M",
+          "priceCents": 3500,
+          "sku": "66FB0E0599233_5595",
+          "ordinal": 1,
+          "variablePricing": false
+        },
+        {
+          "id": "R43L2R43VMUALDCMT7LC7T3N",
+          "name": "L",
+          "priceCents": 3500,
+          "sku": "66FB0E0599233_5596",
+          "ordinal": 2,
+          "variablePricing": false
+        },
+        {
+          "id": "X343DES5ZZ7TLRWOUIDGC7CX",
+          "name": "XL",
+          "priceCents": 3500,
+          "sku": "66FB0E0599233_5597",
+          "ordinal": 3,
+          "variablePricing": false
+        },
+        {
+          "id": "P7OBLIY2NN3M3SYVH4HK7ROS",
+          "name": "2XL",
+          "priceCents": 3500,
+          "sku": "66FB0E0599233_5598",
+          "ordinal": 4,
+          "variablePricing": false
+        },
+        {
+          "id": "VYA5CLOO5MS46EVX3LJRPXMD",
+          "name": "3XL",
+          "priceCents": 3500,
+          "sku": "66FB0E0599233_5599",
+          "ordinal": 5,
+          "variablePricing": false
+        },
+        {
+          "id": "GDXRG6N7P3HIZICMD5D7M6DW",
+          "name": "4XL",
+          "priceCents": 3500,
+          "sku": "66FB0E0599233_5600",
+          "ordinal": 6,
+          "variablePricing": false
+        },
+        {
+          "id": "JHSQYEX6AN6G7UB2RGUAS5JI",
+          "name": "5XL",
+          "priceCents": 3500,
+          "sku": "66FB0E0599233_5601",
+          "ordinal": 7,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "U2KCETXJS6NSOWK2C7R4T2UW",
+      "name": "Support Your Local Sticker",
+      "description": null,
+      "categories": [
+        "Seasonal Drinks",
+        "Items"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/0c72ea71353c1d9fadc11705adc92368316c3f3f/original.jpeg"
+      ],
+      "variations": [
+        {
+          "id": "IWBA7SUCZZULPFFKE2EWDPMT",
+          "name": "Regular",
+          "priceCents": 300,
+          "sku": null,
+          "ordinal": 0,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    },
+    {
+      "squareItemId": "4CAJZGIQVAJWFKAJPVDQZ657",
+      "name": "Tote Bag",
+      "description": null,
+      "categories": [
+        "Items"
+      ],
+      "images": [
+        "https://items-images-production.s3.us-west-2.amazonaws.com/files/7e73111352e8f0fb4a6bcb90ecb987c3daab9600/original.png"
+      ],
+      "variations": [
+        {
+          "id": "3MTZULTVPQBVWBYTX2ROAFHO",
+          "name": "Regular",
+          "priceCents": 2200,
+          "sku": null,
+          "ordinal": 0,
+          "variablePricing": false
+        }
+      ],
+      "modifierListIds": [],
+      "sellable": true
+    }
+  ],
+  "modifierLists": [
+    {
+      "id": "CUL47WZ222RFSJWJVPDFKOQF",
+      "name": "Hot or Iced",
+      "selectionType": "MULTIPLE",
+      "modifiers": [
+        {
+          "id": "XJIQLWCZSXYYKKVI3XLHPQ7G",
+          "name": "Hot",
+          "priceCents": 0,
+          "ordinal": 0
+        },
+        {
+          "id": "RJ5DCFKDBPF6WUQ45BWNANCV",
+          "name": "Iced",
+          "priceCents": 0,
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "UQ73ZMY3RL3TVLOFYAACMANO",
+      "name": "Hot or Iced",
+      "selectionType": "MULTIPLE",
+      "modifiers": [
+        {
+          "id": "35TFLFA54XSXQEIYZUBBOXTF",
+          "name": "Iced",
+          "priceCents": 0,
+          "ordinal": 0
+        },
+        {
+          "id": "ABWOIWO6UAF3GFY2XZUA2O4I",
+          "name": "Hot",
+          "priceCents": 0,
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "UNZKQ7V6DNPQ4JS3TPPQ4F4M",
+      "name": "Flavors",
+      "selectionType": "MULTIPLE",
+      "modifiers": [
+        {
+          "id": "X3G5MU3TRYOCRS7BI6WM4WOO",
+          "name": "Caramel",
+          "priceCents": 50,
+          "ordinal": 0
+        },
+        {
+          "id": "3ARW7637UFXF7KIEBRKRVLRZ",
+          "name": "Mocha",
+          "priceCents": 50,
+          "ordinal": 1
+        },
+        {
+          "id": "KYNOBPOZCMQQU2C3KYM7BS6G",
+          "name": "Honey Cinnamon",
+          "priceCents": 50,
+          "ordinal": 2
+        },
+        {
+          "id": "2PZUQHPLRYWVOM7ATAAF5OXV",
+          "name": "Cuban",
+          "priceCents": 50,
+          "ordinal": 3
+        },
+        {
+          "id": "AECXRSOTM3SCOTGPFMPJHOYI",
+          "name": "Vanilla",
+          "priceCents": 50,
+          "ordinal": 4
+        },
+        {
+          "id": "EJKKPKGVR2HLZW6IG56CKQKL",
+          "name": "None",
+          "priceCents": 0,
+          "ordinal": 5
+        }
+      ]
+    },
+    {
+      "id": "ZW4KOIN6LNSW3QRYMOHTISTN",
+      "name": "Extra Shot",
+      "selectionType": "MULTIPLE",
+      "modifiers": [
+        {
+          "id": "KAQAOAGDK7IVV36E3SS2IDJG",
+          "name": "Extra Shot of Espresso",
+          "priceCents": 100,
+          "ordinal": 0
+        },
+        {
+          "id": "ACFDE7AAX6EZBFRH7XUONQWJ",
+          "name": "Regular",
+          "priceCents": 0,
+          "ordinal": 1
+        }
+      ]
+    },
+    {
+      "id": "I7QUW7T3HNZ5NCOZRHIBQFCH",
+      "name": "Milk",
+      "selectionType": "MULTIPLE",
+      "modifiers": [
+        {
+          "id": "6RSSPQQAOT7PZIMLGBJ3HPTY",
+          "name": "Whole",
+          "priceCents": 0,
+          "ordinal": 0
+        },
+        {
+          "id": "S3GLQU3ITJGBCTOLNBC7WE34",
+          "name": "Skim",
+          "priceCents": 0,
+          "ordinal": 1
+        },
+        {
+          "id": "EX7HJGB73Z75L4NUEZD2Y44W",
+          "name": "Oat",
+          "priceCents": 100,
+          "ordinal": 2
+        },
+        {
+          "id": "SJ26JST7IDTZ7BGOMZNRC5PJ",
+          "name": "Almond",
+          "priceCents": 100,
+          "ordinal": 3
+        },
+        {
+          "id": "EKTBWZZJA525S3QRNLC5Y4J2",
+          "name": "None",
+          "priceCents": 0,
+          "ordinal": 4
+        }
+      ]
+    },
+    {
+      "id": "ZXVH6YKJFM5B6BAVAKC7FO6Z",
+      "name": "Blend",
+      "selectionType": "MULTIPLE",
+      "modifiers": [
+        {
+          "id": "FNY2JTEBTRNIK3GQ7PD3IXRC",
+          "name": "Hibiscus",
+          "priceCents": 0,
+          "ordinal": 0
+        },
+        {
+          "id": "3OPU7QZ3RQWHLPGJRXSLPZIQ",
+          "name": "Earl Grey",
+          "priceCents": 0,
+          "ordinal": 1
+        },
+        {
+          "id": "ZFA5SJLWGHQM7HZE5TUOM6AP",
+          "name": "Jasmine Peach",
+          "priceCents": 0,
+          "ordinal": 2
+        },
+        {
+          "id": "UFMVJSFJLCLPRVEQNREF3IKB",
+          "name": "Blend 333",
+          "priceCents": 0,
+          "ordinal": 3
+        },
+        {
+          "id": "IDVRQFD3XCJZ2SWEFO6TZ4VM",
+          "name": "English Breakfast",
+          "priceCents": 0,
+          "ordinal": 4
+        }
+      ]
+    },
+    {
+      "id": "ZNSBV32IMZFS7P53YUJTBK2I",
+      "name": "Additional Details",
+      "selectionType": "SINGLE",
+      "modifiers": []
+    }
+  ]
+}

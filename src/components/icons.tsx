@@ -118,6 +118,17 @@ export function Home(props: IconProps) {
   );
 }
 
+/** Two-leaf sprig — the About tab. Echoes the botanical motif the room and the
+ *  page art already lean on, and stays distinct from Bean / Cup / Bag at 22px. */
+export function Sprout(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 21V9" />
+      <path d="M12 13c0-3 2-5.5 5.5-5.5C17.5 10.5 15.5 13 12 13Z" />
+      <path d="M12 17c0-3-2-5.5-5.5-5.5C6.5 14.5 8.5 17 12 17Z" />
+    </svg>
+  );
+}
 export function Cup(props: IconProps) {
   return (
     <svg {...base} {...props}>

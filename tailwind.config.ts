@@ -46,6 +46,12 @@ const config: Config = {
       },
       transitionTimingFunction: {
         'out-expo': 'cubic-bezier(0.16, 1, 0.3, 1)',
+        // iOS sheet presentation curve (Ionic's, the one vaul settled on).
+        // Front-loaded: it covers ~90% of the travel in the first ~45% of the
+        // duration, so 500ms reads as "arrives in 230ms and settles" rather
+        // than slow. ease-out-expo is too abrupt for a modal surface — it
+        // snaps. Used by the order sheets only.
+        drawer: 'cubic-bezier(0.32, 0.72, 0, 1)',
       },
       keyframes: {
         'neon-flicker': {
@@ -77,6 +83,20 @@ const config: Config = {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(100%)' },
         },
+        // The order pill's count reacts when something lands in the cart —
+        // the one piece of add-to-cart feedback that isn't a transient toast.
+        'cart-bump': {
+          '0%': { transform: 'scale(1)' },
+          '35%': { transform: 'scale(1.28)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        // Item sheet dismissing: the row it came from pulses once so the
+        // customer sees WHERE the drink went.
+        'row-flash': {
+          '0%': { backgroundColor: 'rgba(122, 143, 115, 0)' },
+          '30%': { backgroundColor: 'rgba(122, 143, 115, 0.16)' },
+          '100%': { backgroundColor: 'rgba(122, 143, 115, 0)' },
+        },
       },
       animation: {
         'neon-flicker': 'neon-flicker 6s linear infinite',
@@ -84,6 +104,8 @@ const config: Config = {
         marquee: 'marquee 38s linear infinite',
         'fade-up': 'fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
         shimmer: 'shimmer 1.4s ease-in-out infinite',
+        'cart-bump': 'cart-bump 0.42s cubic-bezier(0.32, 0.72, 0, 1)',
+        'row-flash': 'row-flash 0.9s ease-out',
       },
     },
   },

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { site, openStatusFor, type OpenStatus as Status } from '@/lib/site';
+import { site, shopOpenStatus, type OpenStatus as Status } from '@/lib/site';
 
 /**
  * "Open now / Closed" pill. Answers a coffee shop's #1 question on-site instead
@@ -9,21 +9,10 @@ import { site, openStatusFor, type OpenStatus as Status } from '@/lib/site';
  * client render show the static hours summary (also the no-JS fallback); after
  * mount it resolves live status in the SHOP's timezone (never the visitor's),
  * refreshing each minute so it can't go stale on a long-lived static export.
+ *
+ * The clock + hours math is shared with the /order checkout gate and the
+ * checkout function — see src/lib/hours.ts.
  */
-function nowInShop(): { weekday: string; minutes: number } {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: site.timezone,
-    weekday: 'long',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: false,
-  }).formatToParts(new Date());
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  let hour = parseInt(get('hour'), 10);
-  if (hour === 24) hour = 0; // some engines emit "24" at midnight under hour12:false
-  return { weekday: get('weekday'), minutes: hour * 60 + parseInt(get('minute'), 10) };
-}
-
 export default function OpenStatus({
   tone = 'light',
   className = '',
@@ -35,10 +24,7 @@ export default function OpenStatus({
   const [status, setStatus] = useState<Status | null>(null);
 
   useEffect(() => {
-    const update = () => {
-      const { weekday, minutes } = nowInShop();
-      setStatus(openStatusFor(weekday, minutes));
-    };
+    const update = () => setStatus(shopOpenStatus());
     update();
     const id = setInterval(update, 60_000);
     return () => clearInterval(id);

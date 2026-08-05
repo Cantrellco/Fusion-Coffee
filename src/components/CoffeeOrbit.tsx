@@ -26,6 +26,16 @@ import { useEffect, useRef, useState } from 'react';
    "stabilize" the can's base; because the video is a full-bleed
    object-cover layer, that slid the entire frame — background and
    all — which read as the background drifting/creeping. Removed.)
+
+   Smoothness, on phones especially, comes from four things — see
+   the knobs and the scrub effect below for each:
+     1. an eased playhead, so a flick glides instead of snapping;
+     2. seeks quantised to the encode's own frame grid, so no seek
+        is ever spent landing on the frame already on screen;
+     3. an event-driven seek chain (seek → 'seeked' → next seek)
+        rather than an rAF poll, so seeks run back-to-back;
+     4. zero forced layout inside the scroll handler — the section
+        and panel heights are measured once and cached.
    ============================================================ */
 
 type CoffeeOrbitProps = {
@@ -48,6 +58,32 @@ const SCRUB_SCROLL_VH_MOBILE = 260;
 // dropped the 'seeked' event (an iOS/Safari failure mode) and re-issue
 // it so the playhead can never get permanently stranded.
 const SEEK_WATCHDOG_MS = 350;
+// Frame rate of each encode (see scripts/encode-orbit.sh — these MUST
+// match it). The scrub rounds every seek onto this grid and skips the
+// seek entirely when it resolves to the frame already displayed: at
+// mobile's ~8px of scroll per frame, a naive continuous mapping spends
+// most of its seeks re-fetching the current frame, and those wasted
+// seeks are exactly what starves the ones that would move the picture.
+const FPS_DESKTOP = 30;
+const FPS_MOBILE = 15;
+// Playhead easing time constant, in ms — the playhead chases the scroll
+// position exponentially rather than being pinned to it.
+//
+// This is the single biggest win for phone smoothness, and it is not
+// really about the video: iOS coalesces scroll events during momentum
+// scrolling, so a flick delivers a few large jumps rather than a stream
+// of small ones. Pinned 1:1, the orbit lurched several degrees per event
+// and then sat still — the "glitchy" read. Chasing an eased target turns
+// the same gesture into continuous motion that decelerates into place,
+// and as a bonus every seek stays near the last one (short seeks are far
+// cheaper than long ones). 110ms is short enough to still feel directly
+// driven by the finger.
+//
+// Desktop is 0 — no easing, playhead pinned to the scroll exactly as
+// before. Wheel/trackpad scroll is already fine-grained and desktop seeks
+// are fast, so there is nothing to smooth and behaviour stays unchanged.
+const EASE_TAU_MOBILE_MS = 110;
+const EASE_TAU_DESKTOP_MS = 0;
 // -------------------------------------------------------------------
 
 export default function CoffeeOrbit({
@@ -57,7 +93,7 @@ export default function CoffeeOrbit({
   const sectionRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   // The pinned stage — also the measuring stick for the scrub's travel
-  // (see progress() below), so scroll room and viewport share one base.
+  // (see measure() below), so scroll room and viewport share one base.
   const stickyRef = useRef<HTMLDivElement>(null);
   // Overlay state: the "scroll to spin" cue fades once the orbit starts; the
   // payoff caption fades in near the end of the turn.
@@ -68,11 +104,12 @@ export default function CoffeeOrbit({
   // below swaps in the mobile value (read once — this only matters while
   // the section is on screen, a live listener isn't worth it).
   const [scrubVh, setScrubVh] = useState(SCRUB_SCROLL_VH);
-  // Phones get a ~0.9 MB 720p encode instead of the 17.9 MB 1080p master —
-  // the single biggest data saving on the site. Safe to swap in a mount
-  // effect: the element ships preload="none" and only calls load() from the
-  // approach observer, which registers after hydration, so the source is
-  // always final before any bytes are requested.
+  // Phones get a 15fps 720p encode (~4.8 MB) instead of the 30fps 1080p
+  // master (17.9 MB) — both the biggest data saving on the site and half
+  // the frames for the scrub to chase. Safe to swap in a mount effect: the
+  // element ships preload="none" and only calls load() from the approach
+  // observer, which registers after hydration, so the source is always
+  // final before any bytes are requested.
   const [mobileClip, setMobileClip] = useState(false);
   // prefers-reduced-motion: when set we never scrub — the section collapses
   // to a single static screen (see the style prop) and both effects below
@@ -113,9 +150,9 @@ export default function CoffeeOrbit({
     return () => mq.removeEventListener('change', apply);
   }, []);
 
-  // Defer the heavy (~18 MB) clip until the section is within ~1.5 screens, so
-  // the majority of homepage visitors who never reach it don't pay for it — but
-  // it's fully buffered before anyone actually scrubs. The element ships with
+  // Defer the clip until the section is within ~1.5 screens, so the majority of
+  // homepage visitors who never reach it don't pay for it — but it's fully
+  // buffered before anyone actually scrubs. The element ships with
   // preload="none"; we upgrade to "auto" + load() on approach. The scrub effect
   // below already re-arms on durationchange/canplay, so metadata arriving late
   // is handled.
@@ -123,8 +160,8 @@ export default function CoffeeOrbit({
     const section = sectionRef.current;
     const video = videoRef.current;
     if (!section || !video) return;
-    // Reduced motion = no scrub, so never pull the heavy clip at all — the
-    // poster is the whole show (also the respectful call on data).
+    // Reduced motion = no scrub, so never pull the clip at all — the poster is
+    // the whole show (also the respectful call on data).
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const io = new IntersectionObserver(
       (entries) => {
@@ -160,92 +197,195 @@ export default function CoffeeOrbit({
       return;
     }
 
-    let target = 0; // where the scroll wants the playhead
-    let raf: number | null = null;
-    let seekStartedAt = 0; // when the in-flight seek began (for the watchdog)
+    const fps = mobileClip ? FPS_MOBILE : FPS_DESKTOP;
+    const tau = mobileClip ? EASE_TAU_MOBILE_MS : EASE_TAU_DESKTOP_MS;
+    const halfFrame = 0.5 / fps;
 
-    // Map scroll position within the section onto 0–1 progress.
-    const progress = () => {
-      const rect = section.getBoundingClientRect();
-      // Travel is measured against the pinned panel's own height (100svh),
-      // NOT window.innerHeight: innerHeight tracks the *dynamic* viewport,
-      // so on mobile it jumps as the URL bar hides/shows mid-scrub and the
-      // playhead drifted against the svh-sized section. The panel and the
-      // section share the svh base, so scrolled/travel map 1:1 — and the
-      // playhead hits exactly 1 at the moment the sticky panel releases.
-      // On desktop svh == vh == innerHeight: behavior is identical.
+    // --- cached geometry ---------------------------------------------
+    // Travel is measured against the pinned panel's own height (100svh),
+    // NOT window.innerHeight: innerHeight tracks the *dynamic* viewport, so
+    // on mobile it jumps as the URL bar hides/shows mid-scrub and the
+    // playhead drifted against the svh-sized section. The panel and the
+    // section share the svh base, so scrolled/travel map 1:1 — and the
+    // playhead hits exactly 1 at the moment the sticky panel releases.
+    // On desktop svh == vh == innerHeight: behavior is identical.
+    //
+    // Measured once here and on resize, never in the scroll handler. Both
+    // reads force layout, and three forced layouts per scroll event is a
+    // real stutter on a phone mid-momentum-scroll — the heights are pure
+    // svh so they cannot change between resizes anyway.
+    let travel = 0;
+    const measure = () => {
       const viewport = stickyRef.current?.offsetHeight ?? window.innerHeight;
-      const travel = section.offsetHeight - viewport;
-      if (travel <= 0) return 0;
-      const scrolled = Math.min(Math.max(-rect.top, 0), travel);
-      return scrolled / travel;
+      travel = section.offsetHeight - viewport;
+    };
+
+    // --- playhead state ----------------------------------------------
+    let targetT = 0; // where the scroll wants the playhead, in seconds
+    let easedT = 0; // where the playhead actually is (chases targetT)
+    let raf: number | null = null;
+    let lastTickAt = 0;
+    let pendingSeek = false; // a seek we issued that hasn't reported back
+    let seekIssuedAt = 0;
+    let shownFrame = -1; // frame index currently on screen (or being sought)
+    // Mirror the two overlay booleans so a scroll event that doesn't cross a
+    // threshold never enters React's dispatch path at all.
+    let startedNow = false;
+    let nearEndNow = false;
+
+    const lastFrame = () => {
+      const duration = video.duration;
+      if (!duration || Number.isNaN(duration)) return -1;
+      return Math.max(0, Math.round(duration * fps) - 1);
+    };
+
+    // Seek to the middle of the frame's interval, not its edge: edges sit
+    // exactly on the boundary between two frames and different engines round
+    // them different ways, which shows up as an occasional one-frame flicker
+    // back and forth while scrubbing slowly.
+    const timeOfFrame = (f: number) => (f + 0.5) / fps;
+
+    // Don't issue a seek into a region that hasn't downloaded yet — it can't
+    // complete until the bytes land, and meanwhile it blocks the one seek slot
+    // we allow, so the orbit freezes instead of simply lagging the buffer. The
+    // 'progress' listener re-pumps as the buffer grows. If the browser reports
+    // no ranges at all we let the seek through rather than deadlock.
+    const isBuffered = (t: number) => {
+      const b = video.buffered;
+      if (b.length === 0) return true;
+      const duration = video.duration || 0;
+      for (let i = 0; i < b.length; i += 1) {
+        // Stay a frame clear of a range's trailing edge — a seek that lands
+        // right on it can resolve into the not-yet-downloaded side. A range
+        // that runs to the end of the clip has no such edge, and applying the
+        // margin there made the last frame permanently unreachable, so the
+        // orbit stopped one frame short of the full turn.
+        const end = b.end(i);
+        const limit = end >= duration - 1e-3 ? end : end - 1 / fps;
+        if (t >= b.start(i) - 1e-3 && t <= limit) return true;
+      }
+      return false;
+    };
+
+    const pump = () => {
+      if (pendingSeek) return;
+      const last = lastFrame();
+      if (last < 0) return;
+      const f = Math.min(last, Math.max(0, Math.floor(easedT * fps)));
+      if (f === shownFrame) return;
+      const t = timeOfFrame(f);
+      if (!isBuffered(t)) return; // retried from 'progress' / the next tick
+      shownFrame = f;
+      pendingSeek = true;
+      seekIssuedAt = performance.now();
+      try {
+        video.currentTime = t;
+      } catch {
+        // seeking can briefly throw mid-load — drop the claim so we retry
+        pendingSeek = false;
+        shownFrame = -1;
+      }
+    };
+
+    // Chain the next seek off completion rather than off the next animation
+    // frame: seeks then run back-to-back at whatever rate the device can
+    // manage, instead of being capped at one per rAF.
+    const onSeeked = () => {
+      pendingSeek = false;
+      pump();
     };
 
     const schedule = () => {
       if (raf == null) raf = requestAnimationFrame(tick);
     };
 
-    const tick = () => {
+    const tick = (now: number) => {
       raf = null;
+
+      // Watchdog first, and before the duration guard: if the browser
+      // swallowed a 'seeked' event, the seek slot must be released even on
+      // the paths that return early, or the chain stalls forever.
+      if (pendingSeek && performance.now() - seekIssuedAt > SEEK_WATCHDOG_MS) {
+        pendingSeek = false;
+        shownFrame = -1;
+      }
+
       // Read duration LIVE off the element. Caching it from 'loadedmetadata'
       // is racy — that event can fire before this effect mounts (more likely
       // on heavier clips), which left the playhead stuck at 0.
-      const duration = video.duration;
-      if (!duration || Number.isNaN(duration)) {
+      if (lastFrame() < 0) {
         // Duration not ready — let the chain die HERE and rely on the
         // 'loadedmetadata' / 'durationchange' / 'canplay' listeners below to
         // re-arm it the moment metadata lands. Self-rescheduling instead was
         // a real bug: with preload="none" metadata may never arrive (visitor
         // never nears the section), which left a permanent 60fps no-op rAF
         // loop spinning from page load — measurable battery drain on phones.
+        lastTickAt = 0;
         return;
       }
-      // Never issue a new seek while one is still in flight: heavier clips
-      // drop seeks requested mid-seek, which starved the playhead and pinned
-      // it at 0. Wait for the current seek to finish, then chase the target.
-      if (video.seeking) {
-        // Watchdog: if the seek overruns, the browser likely swallowed the
-        // 'seeked' event — re-issue so the loop can't spin here forever.
-        if (seekStartedAt && performance.now() - seekStartedAt > SEEK_WATCHDOG_MS) {
-          try {
-            video.currentTime = target;
-            seekStartedAt = performance.now();
-          } catch {
-            /* seeking can briefly throw mid-load */
-          }
-        }
-        schedule();
-        return;
+
+      const dt = lastTickAt ? Math.min(now - lastTickAt, 100) : 0;
+      lastTickAt = now;
+
+      if (tau > 0 && dt > 0) {
+        // Frame-rate independent exponential approach: the same 110ms feel
+        // whether the device is running the loop at 120Hz or dropping to 30.
+        easedT += (targetT - easedT) * (1 - Math.exp(-dt / tau));
+      } else {
+        easedT = targetT;
       }
-      if (Math.abs(target - video.currentTime) > 0.03) {
-        try {
-          video.currentTime = target;
-          seekStartedAt = performance.now();
-        } catch {
-          /* seeking can briefly throw mid-load */
-        }
+      // Snap once we're inside a frame's width — otherwise the asymptote
+      // keeps the loop alive forever for motion nobody can see.
+      if (Math.abs(targetT - easedT) < halfFrame) easedT = targetT;
+
+      pump();
+
+      if (easedT !== targetT || pendingSeek) {
         schedule();
+      } else {
+        lastTickAt = 0;
       }
     };
 
     const onScroll = () => {
-      const p = progress();
-      target = p * (video.duration || 0);
-      // Cheap threshold flips — React bails when the boolean is unchanged.
-      setStarted(p > 0.015);
-      setNearEnd(p > 0.88);
+      const rect = section.getBoundingClientRect();
+      const p = travel > 0 ? Math.min(Math.max(-rect.top, 0), travel) / travel : 0;
+      targetT = p * (video.duration || 0);
+
+      const s = p > 0.015;
+      if (s !== startedNow) {
+        startedNow = s;
+        setStarted(s);
+      }
+      const n = p > 0.88;
+      if (n !== nearEndNow) {
+        nearEndNow = n;
+        setNearEnd(n);
+      }
       schedule();
+    };
+
+    // Re-baseline: put the playhead where the scroll already is with no ease.
+    // Used on metadata and on resize, where easing from a stale position would
+    // animate a turn the visitor never asked for.
+    const rebase = () => {
+      measure();
+      onScroll();
+      easedT = targetT;
+      shownFrame = -1;
+      pump();
     };
 
     const onMeta = () => {
       try {
         video.pause();
-        video.currentTime = 0;
       } catch {
         /* ignore */
       }
-      onScroll(); // recompute now that the duration is known
+      rebase();
     };
+
+    measure();
     if (video.readyState >= 1) onMeta();
 
     video.addEventListener('loadedmetadata', onMeta);
@@ -253,31 +393,36 @@ export default function CoffeeOrbit({
     // playable, so a metadata race can never leave the playhead frozen.
     video.addEventListener('durationchange', onScroll);
     video.addEventListener('canplay', onScroll);
+    video.addEventListener('seeked', onSeeked);
+    // Buffer grew — a seek we declined as unbuffered may be viable now.
+    video.addEventListener('progress', pump);
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', rebase);
     onScroll();
 
     return () => {
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
+      window.removeEventListener('resize', rebase);
       video.removeEventListener('loadedmetadata', onMeta);
       video.removeEventListener('durationchange', onScroll);
       video.removeEventListener('canplay', onScroll);
+      video.removeEventListener('seeked', onSeeked);
+      video.removeEventListener('progress', pump);
       if (raf != null) cancelAnimationFrame(raf);
     };
-    // scrubVh is a dep so the effect re-runs after the mount effect swaps in
-    // the mobile scroll room — its initial onScroll() re-baselines the
-    // playhead against the new section height. On desktop scrubVh never
+    // scrubVh / mobileClip are deps so the effect re-runs after the mount
+    // effect swaps in the mobile scroll room, frame rate and easing — its
+    // rebase() re-measures against the new section height. On desktop neither
     // changes, so this runs once, exactly as before.
-  }, [basePath, scrubVh]);
+  }, [basePath, scrubVh, mobileClip]);
 
   return (
     // Height set via --orbit-vh consumed by .orbit-room (globals.css), which
-    // declares vh with an svh override — svh keeps the section and progress()
-    // on the same small-viewport base (URL-bar-proof), while engines without
-    // svh fall back to vh instead of dropping the height entirely. Under
-    // reduced motion the scroll room collapses to one static screen; with no
-    // JS at all, .orbit-room's html:not(.js) rule does the same collapse.
+    // declares vh with an svh override — svh keeps the section and the scrub's
+    // travel on the same small-viewport base (URL-bar-proof), while engines
+    // without svh fall back to vh instead of dropping the height entirely.
+    // Under reduced motion the scroll room collapses to one static screen; with
+    // no JS at all, .orbit-room's html:not(.js) rule does the same collapse.
     <section
       ref={sectionRef}
       className="orbit-room relative bg-espresso"
@@ -288,7 +433,7 @@ export default function CoffeeOrbit({
           100vh hangs below the collapsible URL bar, pushing the pinned
           stage's bottom edge off screen; svh always fits (== vh on desktop),
           and non-svh engines keep the vh line instead of losing the height.
-          This element also measures `travel` for the scrub — see progress(). */}
+          This element also measures `travel` for the scrub — see measure(). */}
       <div
         ref={stickyRef}
         className="h-screen-small sticky top-0 flex w-full items-center justify-center overflow-hidden"
@@ -306,10 +451,10 @@ export default function CoffeeOrbit({
           className="h-full w-full object-cover"
         >
           {/* H.264 mp4, all-intra (every frame a keyframe) so each scroll
-              position seeks to an exact, instantly-decodable frame — the
-              key to reliable scroll scrubbing. Phones swap to the -720
-              encode (~0.9 MB vs 17.9 MB) before any bytes load — see the
-              mobileClip mount effect. */}
+              position seeks to an exact, instantly-decodable frame — the key
+              to reliable scroll scrubbing. Phones swap to the -720 encode
+              (15fps, ~4.8 MB vs 30fps, 17.9 MB) before any bytes load — see
+              the mobileClip mount effect and scripts/encode-orbit.sh. */}
           <source
             src={`${basePath}${mobileClip ? '-720' : ''}.mp4`}
             type="video/mp4"

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { site } from '@/lib/site';
-import { Bag, Bean, Cup, Home, MapPin } from './icons';
+import { Bag, Bean, Home, MapPin, Sprout } from './icons';
 
 /**
  * Mobile app shell: the persistent bottom tab bar (< md only — desktop keeps
@@ -12,7 +12,7 @@ import { Bag, Bean, Cup, Home, MapPin } from './icons';
  *
  * Four thumb-reachable destinations plus a raised center "Order" action, the
  * one revenue CTA, in brick so it reads as THE button. The tab set is curated
- * from `nav` rather than mirrored 1:1 — About / Parties / Contact-extras live
+ * from `nav` rather than mirrored 1:1 — Menu / Parties / Contact-extras live
  * in the sheet menu behind the top-bar hamburger (and the footer), so nothing
  * we built is lost; the bar stays five items wide like a real tab bar.
  *
@@ -22,9 +22,13 @@ import { Bag, Bean, Cup, Home, MapPin } from './icons';
  */
 
 // Left/right tab pairs around the center Order action.
+// About sits here rather than Menu: the center Order action already opens the
+// full menu (/order lists every item on /menu, priced and orderable), so two of
+// the five mobile tabs pointed at the same content. /menu is still one tap away
+// in the sheet menu and the footer.
 const TABS_LEFT = [
   { label: 'Home', href: '/', icon: Home },
-  { label: 'Menu', href: '/menu/', icon: Cup },
+  { label: 'About', href: '/about/', icon: Sprout },
 ];
 const TABS_RIGHT = [
   { label: 'Shop', href: '/merch/', icon: Bag },
