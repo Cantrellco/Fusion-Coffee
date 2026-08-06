@@ -180,13 +180,13 @@ export default function ShopExperience() {
     // phone). Reopen the bag with whatever they'd typed; the wallet's token
     // arrives moments later through WalletButtons, which is already mounted
     // because the bag above was restored.
-    if (!SQUARE_READY || lines.length === 0) return;
     try {
       const raw = window.sessionStorage.getItem(CHECKOUT_KEY);
-      if (!raw) return;
-      // One-shot: consumed here so an ordinary refresh later doesn't keep
-      // springing the drawer open.
+      // One-shot, and cleared even when it can't be used (an order was placed
+      // and the bag is empty). Leaving it would spring the drawer open later on
+      // a brand new bag, prefilled with a stranger's old address.
       window.sessionStorage.removeItem(CHECKOUT_KEY);
+      if (!raw || !SQUARE_READY || lines.length === 0) return;
       const saved = JSON.parse(raw) as {
         address?: ShippingAddress;
         preferred?: unknown;

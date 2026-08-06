@@ -265,13 +265,13 @@ export default function OrderExperience() {
     // phone). Restore what they'd typed and put the cart back in front of them;
     // the wallet's token arrives moments later through WalletButtons, which is
     // already mounted because the cart above was restored.
-    if (!SQUARE_READY || lines.length === 0) return;
     try {
       const raw = window.sessionStorage.getItem(CHECKOUT_KEY);
-      if (!raw) return;
-      // One-shot: consumed here so an ordinary refresh later doesn't keep
-      // springing the cart open.
+      // One-shot, and cleared even when it can't be used (an order was placed
+      // and the cart is empty). Leaving it would spring the sheet open days
+      // later on a brand new cart, prefilled with a stranger's old details.
       window.sessionStorage.removeItem(CHECKOUT_KEY);
+      if (!raw || !SQUARE_READY || lines.length === 0) return;
       const saved = JSON.parse(raw) as {
         name?: unknown;
         pickup?: unknown;
@@ -603,7 +603,10 @@ export default function OrderExperience() {
         <div className="mx-auto max-w-xl px-5 text-center sm:px-8">
           <p className="eyebrow justify-center text-brick-deep">Order received</p>
           <h2 className="mt-4 font-display text-fluid-xl text-ink">
-            Thanks, {name.split(' ')[0] || 'friend'} — we&apos;re on it.
+            {/* An express order never showed the name field — the wallet's name
+                (or Cash App handle) is who this is, so greet them by it. */}
+            Thanks, {name.split(' ')[0] || walletName.current.split(' ')[0] || 'friend'} —
+            we&apos;re on it.
           </h2>
           <p className="mt-4 text-ink-muted">
             Your order is heading to the bar for {pickup.toLowerCase()}. Keep an

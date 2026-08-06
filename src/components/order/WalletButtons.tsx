@@ -200,6 +200,14 @@ export default function WalletButtons({
   const gpayId = `wallet-gpay-${uid}`;
   const cashId = `wallet-cashapp-${uid}`;
   const [avail, setAvail] = useState({ apple: false, google: false, cashapp: false });
+  // True once every wallet has had its turn to initialize.
+  //
+  // Until then NOTHING here may be display:none. Google Pay measures its
+  // container during attach() and renders nothing into a hidden one — which is
+  // exactly what an `avail.google ? ... : 'hidden'` class does on the first
+  // render, before attach has told us google is available. The containers stay
+  // in the flow, empty and zero-height, and only collapse once the answer is in.
+  const [settled, setSettled] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -307,9 +315,14 @@ export default function WalletButtons({
         if (el) {
           await cap.attach(`#${cashId}`, { shape: 'round', width: 'full' });
           const started = () => onWalletStart?.();
-          el.addEventListener('click', started);
+          // CAPTURE phase, deliberately. On the way down this always runs
+          // before Cash App's own handler; on the way up it can lose — a
+          // tokenization that fires synchronously unmounts this component
+          // mid-propagation, and the cleanup below then removes this very
+          // listener before the event ever reaches it.
+          el.addEventListener('click', started, true);
           cleanups.push(() => {
-            el.removeEventListener('click', started);
+            el.removeEventListener('click', started, true);
             try {
               void cap.destroy?.();
             } catch {
@@ -321,6 +334,8 @@ export default function WalletButtons({
       } catch {
         /* not available */
       }
+
+      if (!cancelled) setSettled(true);
     })();
 
     return () => {
@@ -365,19 +380,11 @@ export default function WalletButtons({
   }
 
   const any = avail.apple || avail.google || avail.cashapp;
-  if (!any) {
-    // Nothing to show — but the containers must stay in the DOM for attach()
-    // to find them on a later mount.
-    return (
-      <div aria-hidden className="hidden">
-        <div id={gpayId} />
-        <div id={cashId} />
-      </div>
-    );
-  }
+  /** Sized pill once the wallet is in; out of the layout once we know it isn't. */
+  const slot = (ok: boolean) => (ok ? 'wallet-slot' : settled ? 'hidden' : undefined);
 
   return (
-    <div>
+    <div className={settled && !any ? 'hidden' : undefined}>
       {/* Each vendor draws its own mark at its own size. `.wallet-slot` clips
           all three to one 48px pill so the row reads as one control group. */}
       <style>{`
@@ -386,7 +393,8 @@ export default function WalletButtons({
           border-radius: 9999px;
           overflow: hidden;
         }
-        .wallet-slot > * { height: 100%; }
+        .wallet-slot > *,
+        .wallet-slot > * > * { height: 100%; }
         .apple-pay-button {
           -webkit-appearance: -apple-pay-button;
           -apple-pay-button-type: plain;
@@ -418,7 +426,9 @@ export default function WalletButtons({
         <p className="text-sm font-medium text-ink">{label}</p>
       </div>
 
-      <div className="flex flex-col gap-2">
+      {/* The gap only arrives with `settled`, so the empty pre-attach
+          containers don't push a stripe of dead space through the cart. */}
+      <div className={`flex flex-col ${settled ? 'gap-2' : ''}`}>
         {avail.apple && (
           <div className="wallet-slot">
             <button
@@ -429,14 +439,11 @@ export default function WalletButtons({
             />
           </div>
         )}
-        {/* Google Pay + Cash App Pay attach their own buttons here. Kept in the
-            DOM whether or not they're available so attach() can find them. */}
-        <div className={avail.google ? 'wallet-slot' : 'hidden'}>
-          <div id={gpayId} />
-        </div>
-        <div className={avail.cashapp ? 'wallet-slot' : 'hidden'}>
-          <div id={cashId} />
-        </div>
+        {/* Google Pay and Cash App Pay attach their own buttons straight into
+            these — the slot class goes ON the container rather than around it,
+            so there is no hidden ancestor at attach time. */}
+        <div id={gpayId} className={slot(avail.google)} />
+        <div id={cashId} className={slot(avail.cashapp)} />
       </div>
 
       {footnote && (
