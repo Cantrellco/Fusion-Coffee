@@ -658,6 +658,9 @@ export const photos = {
   hero: '/images/hero-brick-greenery.jpg',
   heroAlt: '/images/hero-brick-greenery-alt.jpg',
   interior: '/images/interior-brick-tables.jpg',
+  // The 207 East Main Street frontage — the lead image on /about. Regraded
+  // from the shop's own midday photo to the site's warm, low-contrast palette.
+  storefront: '/images/storefront.jpg',
   loungeNeon: '/images/lounge-neon.jpg',
   barWindow: '/images/bar-window.jpg',
   barEspresso: '/images/bar-espresso-flowers.jpg',

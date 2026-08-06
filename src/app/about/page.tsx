@@ -54,8 +54,8 @@ export default function AboutPage() {
           <Reveal className="md:col-span-7" y={32}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={photos.loungeNeon}
-              alt="The Fusion Coffee lounge — a cream sofa and wood-stump stools beneath the glowing neon sign, framed by hanging ferns."
+              src={photos.storefront}
+              alt="The Fusion Coffee storefront on East Main Street — the script sign on a black facade beneath a red brick building, with a flag on the sidewalk."
               className="aspect-[4/5] w-full object-cover md:aspect-[5/4]"
             />
           </Reveal>
