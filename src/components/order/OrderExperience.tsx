@@ -13,6 +13,7 @@ import {
 } from '@/lib/order';
 import { shopOpenStatus, site, type OpenStatus } from '@/lib/site';
 import { ArrowUpRight, Close } from '@/components/icons';
+import { onFieldEnter } from '@/components/formKeys';
 import { CitrusSlice } from '@/components/Citrus';
 import { specimenFor } from '@/components/SummerSpecimens';
 import SquareCard from './SquareCard';
@@ -262,9 +263,9 @@ export default function OrderExperience() {
     }
 
     // Landing back from a wallet that took the buyer off-site (Cash App on a
-    // phone). Restore what they'd typed and put the cart back in front of them;
-    // the wallet's token arrives moments later through WalletButtons, which is
-    // already mounted because the cart above was restored.
+    // phone). The express buttons live on the PAYMENT step, so that is the step
+    // to come back to — anything less and the wallet's token is dispatched into
+    // an unmounted component and the order they just approved never happens.
     try {
       const raw = window.sessionStorage.getItem(CHECKOUT_KEY);
       // One-shot, and cleared even when it can't be used (an order was placed
@@ -277,16 +278,20 @@ export default function OrderExperience() {
         pickup?: unknown;
         tipPercent?: unknown;
       };
-      if (typeof saved?.name === 'string') setName(saved.name);
+      // The payment step needs a name, and the server needs the shop open.
+      // Without either, resuming would land them on a step that can't pay.
+      if (typeof saved?.name !== 'string' || !saved.name.trim()) return;
+      if (!shopOpenStatus().open) return;
+      setName(saved.name);
       if (typeof saved?.pickup === 'string' && PICKUP_OPTIONS.includes(saved.pickup)) {
         setPickup(saved.pickup);
       }
       if (typeof saved?.tipPercent === 'number' && TIP_OPTIONS.includes(saved.tipPercent)) {
         setTipPercent(saved.tipPercent);
       }
-      // Below lg the cart is a sheet, and the express buttons live inside it.
-      // Harmless at lg and up — useCloseAboveBreakpoint closes it again on a
-      // desktop viewport.
+      setStatus('paying');
+      // Below lg the whole checkout lives inside the cart sheet. Harmless at lg
+      // and up — useCloseAboveBreakpoint closes it again on a desktop viewport.
       setCartOpen(true);
     } catch {
       /* ignore malformed resume state */
@@ -922,60 +927,20 @@ export default function OrderExperience() {
                   </div>
                 </div>
 
-                {/* Totals — deliberately ABOVE the express buttons: the amount
-                    a one-tap wallet is about to charge should be the last thing
-                    read before tapping it. */}
-                <dl className="mt-5 flex flex-col gap-1.5 border-t border-ink/10 pt-4 text-sm">
-                  <div className="flex justify-between text-ink-muted">
-                    <dt>Subtotal</dt>
-                    <dd className="tabular-nums">{formatCents(subtotal)}</dd>
-                  </div>
-                  {tipCents > 0 && (
-                    <div className="flex justify-between text-ink-muted">
-                      <dt>Tip ({tipPercent}%)</dt>
-                      <dd className="tabular-nums">{formatCents(tipCents)}</dd>
-                    </div>
-                  )}
-                  <div className="mt-1 flex justify-between border-t border-ink/10 pt-2 font-medium text-ink">
-                    <dt>Due at checkout</dt>
-                    <dd className="tabular-nums">{formatCents(dueCents)}</dd>
-                  </div>
-                  <p className="mt-1 text-xs text-ink-muted">
-                    Sales tax is added on the payment step.
-                  </p>
-                </dl>
-
-                {/* Express checkout — the whole point is that it comes BEFORE
-                    the form: Apple/Google/Cash App hand back the buyer's name,
-                    so a wallet order is one tap from here with nothing typed.
-                    Renders nothing when no wallet is available, and the manual
-                    checkout below is untouched either way. */}
-                {SQUARE_READY && !closed && status === 'idle' && (
-                  <div className="mt-5">
-                    <WalletButtons
-                      appId={SQ_APP_ID as string}
-                      locationId={SQ_LOCATION_ID as string}
-                      env={SQ_ENV}
-                      amountCents={dueCents}
-                      onPaid={onPaid}
-                      onError={onPayError}
-                      onWalletStart={onWalletStart}
-                      footnote="Your name comes from the wallet — nothing to type."
-                      dividerLabel="or check out below"
-                    />
-                  </div>
-                )}
-
                 {/* Name + pickup */}
-                <div className="mt-5 flex flex-col gap-3">
+                <div data-fields className="mt-5 flex flex-col gap-3">
                   <label className="block">
                     <span className="text-sm font-medium text-ink">Name for the order</span>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                      onKeyDown={onFieldEnter}
                       placeholder="First name"
                       autoComplete="given-name"
+                      // The only text field here, so Done means done: close the
+                      // keyboard rather than jumping focus into the pickup
+                      // select, which would pop a picker straight back open.
                       enterKeyHint="done"
                       className="mt-1.5 w-full rounded-lg border border-ink/15 bg-cream px-3 py-3 text-ink outline-none transition-colors placeholder:text-ink-muted/70 focus:border-brick lg:py-2.5"
                     />
@@ -995,6 +960,27 @@ export default function OrderExperience() {
                     </select>
                   </label>
                 </div>
+
+                {/* Totals */}
+                <dl className="mt-5 flex flex-col gap-1.5 border-t border-ink/10 pt-4 text-sm">
+                  <div className="flex justify-between text-ink-muted">
+                    <dt>Subtotal</dt>
+                    <dd className="tabular-nums">{formatCents(subtotal)}</dd>
+                  </div>
+                  {tipCents > 0 && (
+                    <div className="flex justify-between text-ink-muted">
+                      <dt>Tip ({tipPercent}%)</dt>
+                      <dd className="tabular-nums">{formatCents(tipCents)}</dd>
+                    </div>
+                  )}
+                  <div className="mt-1 flex justify-between border-t border-ink/10 pt-2 font-medium text-ink">
+                    <dt>Due at checkout</dt>
+                    <dd className="tabular-nums">{formatCents(dueCents)}</dd>
+                  </div>
+                  <p className="mt-1 text-xs text-ink-muted">
+                    Sales tax is added on the payment step.
+                  </p>
+                </dl>
               </div>
 
               {/* Pinned footer — the primary action stays visible while the
@@ -1079,8 +1065,19 @@ export default function OrderExperience() {
                   </div>
                 ) : status === 'paying' ? (
                   <div className="animate-fade-up motion-reduce:animate-none">
-                    {/* Card only. The wallets were offered on the cart, before
-                        any of this was typed — that's what makes them express. */}
+                    {/* Express checkout, then the card. Isolated: if no wallet
+                        is available this renders nothing and the card form
+                        below stands alone. Same onPaid → same charge. */}
+                    <WalletButtons
+                      appId={SQ_APP_ID as string}
+                      locationId={SQ_LOCATION_ID as string}
+                      env={SQ_ENV}
+                      amountCents={dueCents}
+                      onPaid={onPaid}
+                      onError={onPayError}
+                      onWalletStart={onWalletStart}
+                      dividerLabel="or pay with card"
+                    />
                     <SquareCard
                       appId={SQ_APP_ID as string}
                       locationId={SQ_LOCATION_ID as string}

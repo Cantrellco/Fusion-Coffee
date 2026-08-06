@@ -21,6 +21,7 @@ import {
   type Fulfillment,
 } from '@/lib/shop';
 import { site } from '@/lib/site';
+import { onFieldEnter } from '@/components/formKeys';
 import { ArrowUpRight, Bag, Close } from '@/components/icons';
 import { CornerBotanical, Sprig } from '@/components/Botanical';
 import Reveal from '@/components/Reveal';
@@ -29,15 +30,18 @@ import WalletButtons, { type WalletContact } from '@/components/order/WalletButt
 
 /**
  * Fold what a digital wallet knows about the buyer into the delivery form.
- * The wallet wins wherever it has a value — it is the buyer's own saved,
- * verified detail — and anything already typed fills the rest.
+ *
+ * The TYPED value wins. The wallet only fills blanks. The express buttons sit
+ * on the payment step, after this address has been entered and validated — a
+ * wallet's billing contact overwriting it would quietly post the hoodie to
+ * whatever address happens to be on the card.
  */
 function mergeWalletAddress(
   current: ShippingAddress,
   contact: WalletContact,
 ): ShippingAddress {
   const pick = (fromWallet: string, typed: string) =>
-    fromWallet.trim() || typed.trim();
+    typed.trim() || fromWallet.trim();
   return {
     name: pick(contact.name, current.name),
     email: pick(contact.email, current.email),
@@ -177,9 +181,9 @@ export default function ShopExperience() {
     }
 
     // Landing back from a wallet that took the buyer off-site (Cash App on a
-    // phone). Reopen the bag with whatever they'd typed; the wallet's token
-    // arrives moments later through WalletButtons, which is already mounted
-    // because the bag above was restored.
+    // phone). The express buttons live on the PAYMENT step, so that is the step
+    // to come back to — anything less and the wallet's token is dispatched into
+    // an unmounted component and the order they just approved never happens.
     try {
       const raw = window.sessionStorage.getItem(CHECKOUT_KEY);
       // One-shot, and cleared even when it can't be used (an order was placed
@@ -192,11 +196,17 @@ export default function ShopExperience() {
         preferred?: unknown;
       };
       const savedAddress = saved?.address;
-      if (savedAddress && typeof savedAddress === 'object') setAddress(savedAddress);
-      if (saved?.preferred === 'PICKUP' || saved?.preferred === 'SHIPMENT') {
-        setPreferred(saved.preferred);
-      }
+      if (!savedAddress || typeof savedAddress !== 'object') return;
+      const savedPreferred: Fulfillment =
+        saved.preferred === 'PICKUP' ? 'PICKUP' : 'SHIPMENT';
+      // Only resume into a payable state — a half-filled address belongs on the
+      // form, not under a Pay button.
+      const resolved = resolveFulfillment(lines, savedPreferred);
+      if (addressProblems(savedAddress, resolved).length) return;
+      setAddress(savedAddress);
+      setPreferred(savedPreferred);
       setOpen(true);
+      setStatus('paying');
     } catch {
       /* ignore malformed resume state */
     }
@@ -689,8 +699,23 @@ export default function ShopExperience() {
             </div>
 
             <div className="mt-5">
-              {/* Card only. The wallets were offered on the bag, before any of
-                  this was typed — that's what makes them express. */}
+              {/* Express checkout, then the card. Isolated: if no wallet is
+                  available this renders nothing and the card form below stands
+                  alone. Same onPaid → same charge.
+                  No requestShippingContact: the delivery address was typed and
+                  validated on the bag before this step, so making Apple/Google
+                  ask for one again is friction that buys nothing. */}
+              <WalletButtons
+                appId={SQ_APP_ID as string}
+                locationId={SQ_LOCATION_ID as string}
+                env={SQ_ENV}
+                amountCents={dueCents}
+                onPaid={onPaid}
+                onError={onPayError}
+                onWalletStart={onWalletStart}
+                referenceId="fusion-coffee-merch"
+                dividerLabel="or pay with card"
+              />
               <SquareCard
                 appId={SQ_APP_ID as string}
                 locationId={SQ_LOCATION_ID as string}
@@ -822,62 +847,14 @@ export default function ShopExperience() {
                   </p>
                 ) : null}
 
-                {/* Totals — deliberately ABOVE the express buttons: the amount
-                    a one-tap wallet is about to charge should be the last thing
-                    read before tapping it. */}
-                <dl className="mt-5 flex flex-col gap-1.5 border-t border-ink/10 pt-4 text-sm">
-                  <div className="flex justify-between text-ink-muted">
-                    <dt>Subtotal</dt>
-                    <dd className="tabular-nums">{formatCents(subtotal)}</dd>
-                  </div>
-                  {fulfillment === 'SHIPMENT' && (
-                    <div className="flex justify-between text-ink-muted">
-                      <dt>Shipping</dt>
-                      <dd>Free</dd>
-                    </div>
-                  )}
-                  <div className="mt-1 flex justify-between border-t border-ink/10 pt-2 font-medium text-ink">
-                    <dt>Due at checkout</dt>
-                    <dd className="tabular-nums">{formatCents(dueCents)}</dd>
-                  </div>
-                  <p className="mt-1 text-xs text-ink-muted">
-                    Sales tax is added on the payment step.
-                  </p>
-                </dl>
-
-                {/* Express checkout — before the form, which is the whole
-                    point: for a shipment the wallet is asked for the delivery
-                    address too, so a one-tap order needs nothing typed. If the
-                    wallet comes back without enough to post to, the form below
-                    takes over and the token is held, not thrown away. */}
-                {SQUARE_READY && status === 'idle' && (
-                  <div className="mt-5">
-                    <WalletButtons
-                      appId={SQ_APP_ID as string}
-                      locationId={SQ_LOCATION_ID as string}
-                      env={SQ_ENV}
-                      amountCents={dueCents}
-                      onPaid={onPaid}
-                      onError={onPayError}
-                      onWalletStart={onWalletStart}
-                      referenceId="fusion-coffee-merch"
-                      requestShippingContact={fulfillment === 'SHIPMENT'}
-                      footnote={
-                        fulfillment === 'SHIPMENT'
-                          ? 'Your name, email and delivery address come from the wallet.'
-                          : 'Your name and email come from the wallet.'
-                      }
-                      dividerLabel="or check out below"
-                    />
-                  </div>
-                )}
-
-                <div className="mt-3 flex flex-col gap-3">
+                <div data-fields className="mt-3 flex flex-col gap-3">
                   <label className="block">
                     <span className="text-sm font-medium text-ink">Full name</span>
                     <input
                       type="text"
                       autoComplete="name"
+                          onKeyDown={onFieldEnter}
+                          enterKeyHint="next"
                       value={address.name}
                       onChange={(e) =>
                         setAddress((a) => ({ ...a, name: e.target.value }))
@@ -891,6 +868,8 @@ export default function ShopExperience() {
                     <input
                       type="email"
                       autoComplete="email"
+                          onKeyDown={onFieldEnter}
+                          enterKeyHint={fulfillment === 'SHIPMENT' ? 'next' : 'done'}
                       inputMode="email"
                       value={address.email}
                       onChange={(e) =>
@@ -911,6 +890,8 @@ export default function ShopExperience() {
                         <input
                           type="text"
                           autoComplete="address-line1"
+                          onKeyDown={onFieldEnter}
+                          enterKeyHint="next"
                           value={address.line1}
                           onChange={(e) =>
                             setAddress((a) => ({ ...a, line1: e.target.value }))
@@ -926,6 +907,8 @@ export default function ShopExperience() {
                         <input
                           type="text"
                           autoComplete="address-line2"
+                          onKeyDown={onFieldEnter}
+                          enterKeyHint="next"
                           value={address.line2}
                           onChange={(e) =>
                             setAddress((a) => ({ ...a, line2: e.target.value }))
@@ -939,6 +922,8 @@ export default function ShopExperience() {
                           <input
                             type="text"
                             autoComplete="address-level2"
+                          onKeyDown={onFieldEnter}
+                          enterKeyHint="next"
                             value={address.city}
                             onChange={(e) =>
                               setAddress((a) => ({ ...a, city: e.target.value }))
@@ -951,6 +936,8 @@ export default function ShopExperience() {
                           <input
                             type="text"
                             autoComplete="address-level1"
+                          onKeyDown={onFieldEnter}
+                          enterKeyHint="next"
                             maxLength={2}
                             value={address.state}
                             onChange={(e) =>
@@ -968,6 +955,8 @@ export default function ShopExperience() {
                           <input
                             type="text"
                             autoComplete="postal-code"
+                          onKeyDown={onFieldEnter}
+                          enterKeyHint="next"
                             inputMode="numeric"
                             value={address.postalCode}
                             onChange={(e) =>
@@ -985,6 +974,8 @@ export default function ShopExperience() {
                         <input
                           type="tel"
                           autoComplete="tel"
+                          onKeyDown={onFieldEnter}
+                          enterKeyHint="done"
                           inputMode="tel"
                           value={address.phone}
                           onChange={(e) =>
@@ -998,6 +989,26 @@ export default function ShopExperience() {
                 </div>
               </div>
 
+              {/* Totals */}
+              <dl className="mt-5 flex flex-col gap-1.5 border-t border-ink/10 pt-4 text-sm">
+                <div className="flex justify-between text-ink-muted">
+                  <dt>Subtotal</dt>
+                  <dd className="tabular-nums">{formatCents(subtotal)}</dd>
+                </div>
+                {fulfillment === 'SHIPMENT' && (
+                  <div className="flex justify-between text-ink-muted">
+                    <dt>Shipping</dt>
+                    <dd>Free</dd>
+                  </div>
+                )}
+                <div className="mt-1 flex justify-between border-t border-ink/10 pt-2 font-medium text-ink">
+                  <dt>Due at checkout</dt>
+                  <dd className="tabular-nums">{formatCents(dueCents)}</dd>
+                </div>
+                <p className="mt-1 text-xs text-ink-muted">
+                  Sales tax is added on the payment step.
+                </p>
+              </dl>
             </div>
 
             <div className="flex-none border-t border-ink/10 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-4">
