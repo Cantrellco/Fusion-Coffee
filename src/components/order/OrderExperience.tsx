@@ -18,6 +18,7 @@ import { CitrusSlice } from '@/components/Citrus';
 import { specimenFor } from '@/components/SummerSpecimens';
 import SquareCard from './SquareCard';
 import SavedCardBlock from './SavedCardBlock';
+import ReceiptSummary from '@/components/checkout/ReceiptSummary';
 import WalletButtons, { type WalletContact } from './WalletButtons';
 import {
   cardExpired,
@@ -703,6 +704,20 @@ export default function OrderExperience() {
   // keeps listing a card past its expiry and it cannot actually pay.
   const showCardForm =
     !savedCard || useAnotherCard || cardExpired(savedCard);
+
+  // Payment is its own SCREEN, not an appendix. The old layout appended the
+  // payment stack under the whole cart (items, tip, name, pickup, totals), so
+  // on a phone the saved card and wallets landed below the fold — the exact
+  // opposite of Baymard's finding that express options belong at the TOP of
+  // the payment step with the summary collapsed. When this is true the sheet
+  // swaps wholesale: receipt first, then every way to pay, nothing else.
+  // 'submitting' keeps the screen mounted so a tap shows progress in place
+  // instead of bouncing back to the bag mid-charge.
+  const payStep =
+    SQUARE_READY &&
+    !closed &&
+    itemCount > 0 &&
+    (status === 'paying' || status === 'submitting');
   // A wallet was tapped: Cash App may now take the buyer off-site, so save what
   // they'd typed. Read back (once) by the hydrate effect on the way in. Same
   // latest-ref trick — this identity must not change while they're typing.
@@ -920,10 +935,47 @@ export default function OrderExperience() {
           >
             <div aria-hidden className="mx-auto mb-3 h-1.5 w-11 rounded-full bg-ink/15 lg:hidden" />
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="font-display text-2xl text-ink">Your order</h2>
-                <p className="mt-1 text-sm text-ink-muted">Pickup at 207 East Main St.</p>
-              </div>
+              {payStep ? (
+                // The payment screen names itself, carries the total, and
+                // offers the way back — the bag is one tap behind it.
+                <div className="flex min-w-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setErrorMsg('');
+                      setStatus('idle');
+                    }}
+                    aria-label="Back to your order"
+                    className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-ink/10 hover:text-ink lg:h-10 lg:w-10"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-5 w-5"
+                      aria-hidden
+                    >
+                      <path d="m15 18-6-6 6-6" />
+                    </svg>
+                  </button>
+                  <div className="min-w-0">
+                    <h2 className="font-display text-2xl text-ink">Payment</h2>
+                    <p className="mt-0.5 truncate text-sm text-ink-muted">
+                      {itemCount} {itemCount === 1 ? 'item' : 'items'} ·{' '}
+                      <span className="tabular-nums">{formatCents(dueCents)}</span>
+                      {' · '}pickup for {name.trim() || walletName.current || 'you'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <h2 className="font-display text-2xl text-ink">Your order</h2>
+                  <p className="mt-1 text-sm text-ink-muted">Pickup at 207 East Main St.</p>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={closeCart}
@@ -941,8 +993,147 @@ export default function OrderExperience() {
             </p>
           ) : (
             <>
-              {/* Scrollable middle: items + tip + name + pickup + totals */}
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-4">
+              {/* Scrollable middle. Keyed on the step so entering payment
+                  mounts a fresh element — scrolled to the top, where the
+                  saved card and wallets now live, instead of wherever the
+                  bag had been scrolled to. */}
+              <div
+                key={payStep ? 'pay' : 'bag'}
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-4"
+              >
+                {payStep ? (
+                  <div className="animate-fade-up pt-4 motion-reduce:animate-none">
+                    {/* The bill, collapsed to a glance; the receipt card is
+                        the payment screen's one flourish. */}
+                    <ReceiptSummary
+                      lines={state.lines.map((l) => ({
+                        key: l.key,
+                        label: l.name,
+                        detail:
+                          l.modifiers.length > 0
+                            ? l.modifiers
+                                .map((m) =>
+                                  m.priceCents
+                                    ? `${m.value} +${formatCents(m.priceCents)}`
+                                    : m.value,
+                                )
+                                .join(' · ')
+                            : undefined,
+                        qty: l.qty,
+                        amountCents: l.priceCents * l.qty,
+                      }))}
+                      extras={
+                        tipCents > 0
+                          ? [{ label: `Tip (${tipPercent}%)`, value: formatCents(tipCents) }]
+                          : []
+                      }
+                      totalCents={dueCents}
+                      note="Sales tax is added when the card is charged."
+                    />
+
+                    <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+                      <p className="min-w-0 truncate text-ink-muted">
+                        Pickup · {pickup.toLowerCase()}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (status === 'submitting') return;
+                          setErrorMsg('');
+                          setStatus('idle');
+                        }}
+                        className="shrink-0 text-xs font-medium text-ink underline underline-offset-2 transition-colors hover:text-brick"
+                      >
+                        Edit order
+                      </button>
+                    </div>
+
+                    {errorMsg && (
+                      <p className="mt-3 rounded-lg border border-brick/40 bg-brick/10 px-3 py-2 text-center text-sm text-ink">
+                        {errorMsg}
+                      </p>
+                    )}
+
+                    {/* Every way to pay, fastest first. pointer-events-none
+                        while a charge is in flight: the wallets stay mounted
+                        now (they used to unmount into a "Processing…" bag
+                        view), and a second tap mid-charge must not be able to
+                        mint a second token. */}
+                    <div
+                      className={`mt-5 ${
+                        status === 'submitting' ? 'pointer-events-none opacity-60' : ''
+                      }`}
+                    >
+                      {savedCard && !useAnotherCard && (
+                        <SavedCardBlock
+                          card={savedCard}
+                          amountLabel={formatCents(dueCents)}
+                          busy={status === 'submitting'}
+                          onPay={paySaved}
+                          onForget={() => void forgetCard()}
+                          onUseAnother={() => setUseAnotherCard(true)}
+                        />
+                      )}
+
+                      <WalletButtons
+                        appId={SQ_APP_ID as string}
+                        locationId={SQ_LOCATION_ID as string}
+                        env={SQ_ENV}
+                        amountCents={dueCents}
+                        onPaid={onPaid}
+                        onError={onPayError}
+                        onWalletStart={onWalletStart}
+                        dividerLabel={showCardForm ? 'or pay with card' : undefined}
+                      />
+
+                      {showCardForm && (
+                        <SquareCard
+                          appId={SQ_APP_ID as string}
+                          locationId={SQ_LOCATION_ID as string}
+                          env={SQ_ENV}
+                          amountLabel={formatCents(dueCents)}
+                          onPaid={onPaid}
+                          onError={onPayError}
+                        />
+                      )}
+
+                      {/* Consent. Square requires explicit permission before a
+                          card goes on file, so this starts unticked and is
+                          never pre-selected. Hidden with no device handle
+                          (private browsing) — nowhere to remember it. */}
+                      {showCardForm && handle && (
+                        <label className="mt-3 flex items-start gap-2.5 text-left">
+                          <input
+                            type="checkbox"
+                            checked={saveCardOptIn}
+                            onChange={(e) => setSaveCardOptIn(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 shrink-0 accent-brick"
+                          />
+                          <span className="text-xs leading-snug text-ink-muted">
+                            {savedCard
+                              ? 'Remember this card instead for faster checkout. '
+                              : 'Save this card on this device for faster checkout. '}
+                            It stays with Square, never on this site, and anyone
+                            using this device could order with it.
+                          </span>
+                        </label>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (status === 'submitting') return;
+                        setErrorMsg('');
+                        setStatus('idle');
+                      }}
+                      className="mt-4 w-full text-center text-xs text-ink-muted underline underline-offset-2 transition-colors hover:text-ink"
+                    >
+                      Back to order
+                    </button>
+                  </div>
+                ) : (
+                  <>
                 <ul className="flex flex-col divide-y divide-ink/10">
                   {state.lines.map((line) => (
                     <li key={line.key} className="flex gap-3 py-4">
@@ -1097,11 +1288,16 @@ export default function OrderExperience() {
                     Sales tax is added on the payment step.
                   </p>
                 </dl>
+                  </>
+                )}
               </div>
 
               {/* Pinned footer — the primary action stays visible while the
                   middle scrolls. Extra bottom padding clears the phone's home
-                  indicator when this is a sheet. */}
+                  indicator when this is a sheet. On the payment step there is
+                  no footer at all: the pay buttons ARE the content, and a
+                  pinned bar under them would just eat sheet height. */}
+              {!payStep && (
               <div className="flex-none border-t border-ink/10 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] lg:pb-4">
                 {closed || status === 'closed' ? (
                   <div className="rounded-lg border border-brick/40 bg-brick/10 px-4 py-4 text-sm text-ink">
@@ -1179,85 +1375,6 @@ export default function OrderExperience() {
                       Check again
                     </button>
                   </div>
-                ) : status === 'paying' ? (
-                  <div className="animate-fade-up motion-reduce:animate-none">
-                    {/* Saved card first — for a returning customer it is the
-                        shortest path there is: one tap, no SDK, no typing. */}
-                    {savedCard && !useAnotherCard && (
-                      <SavedCardBlock
-                        card={savedCard}
-                        amountLabel={formatCents(dueCents)}
-                        busy={false}
-                        onPay={paySaved}
-                        onForget={() => void forgetCard()}
-                        onUseAnother={() => setUseAnotherCard(true)}
-                      />
-                    )}
-
-                    {/* Express checkout. The wallets stay up even when a card
-                        is saved — Apple Pay is just as fast, and hiding it from
-                        someone who prefers it would be a downgrade. */}
-                    <WalletButtons
-                      appId={SQ_APP_ID as string}
-                      locationId={SQ_LOCATION_ID as string}
-                      env={SQ_ENV}
-                      amountCents={dueCents}
-                      onPaid={onPaid}
-                      onError={onPayError}
-                      onWalletStart={onWalletStart}
-                      dividerLabel={showCardForm ? 'or pay with card' : undefined}
-                    />
-                    {/* The card form is what "Use a different card" reveals, so
-                        it has to be genuinely put away while a saved card is on
-                        offer — otherwise that link points at something already
-                        on screen. */}
-                    {showCardForm && (
-                      <SquareCard
-                        appId={SQ_APP_ID as string}
-                        locationId={SQ_LOCATION_ID as string}
-                        env={SQ_ENV}
-                        amountLabel={formatCents(dueCents)}
-                        onPaid={onPaid}
-                        onError={onPayError}
-                      />
-                    )}
-
-                    {/* Consent. Square requires explicit permission before a
-                        card goes on file — "linking cards on file without
-                        obtaining customer permission can result in your
-                        application being disabled without notice" — so this
-                        starts unticked and is never pre-selected. Hidden with
-                        no device handle (private browsing), where there would
-                        be nowhere to remember it. */}
-                    {showCardForm && handle && (
-                      <label className="mt-3 flex items-start gap-2.5 text-left">
-                        <input
-                          type="checkbox"
-                          checked={saveCardOptIn}
-                          onChange={(e) => setSaveCardOptIn(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 shrink-0 accent-brick"
-                        />
-                        <span className="text-xs leading-snug text-ink-muted">
-                          {savedCard
-                            ? 'Remember this card instead for faster checkout. '
-                            : 'Save this card on this device for faster checkout. '}
-                          It stays with Square, never on this site, and anyone
-                          using this device could order with it.
-                        </span>
-                      </label>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setErrorMsg('');
-                        setStatus('idle');
-                      }}
-                      className="mt-3 w-full text-center text-xs text-ink-muted underline underline-offset-2 transition-colors hover:text-ink"
-                    >
-                      Back to order
-                    </button>
-                  </div>
                 ) : (
                   <button
                     type="button"
@@ -1284,6 +1401,7 @@ export default function OrderExperience() {
                   <p className="mt-2 text-center text-xs text-brick">{errorMsg}</p>
                 )}
               </div>
+              )}
             </>
           )}
         </aside>

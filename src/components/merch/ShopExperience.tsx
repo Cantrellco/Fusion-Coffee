@@ -27,6 +27,7 @@ import { CornerBotanical, Sprig } from '@/components/Botanical';
 import Reveal from '@/components/Reveal';
 import SquareCard from '@/components/order/SquareCard';
 import WalletButtons, { type WalletContact } from '@/components/order/WalletButtons';
+import ReceiptSummary from '@/components/checkout/ReceiptSummary';
 
 /**
  * Fold what a digital wallet knows about the buyer into the delivery form.
@@ -633,51 +634,24 @@ export default function ShopExperience() {
              version showed a bare card field with no context, no totals, and
              the only way out was a grey text link below the fold. */
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-6">
-            <div className="mt-1 rounded-xl border border-ink/12 bg-cream/60 p-4">
-              <ul className="flex flex-col gap-2.5">
-                {state.lines.map((line) => (
-                  <li key={line.key} className="flex items-center gap-3">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={line.image}
-                      alt=""
-                      aria-hidden
-                      className="h-9 w-9 shrink-0 border border-ink/10 bg-white object-contain p-0.5"
-                    />
-                    <span className="min-w-0 flex-1 text-sm text-ink">
-                      {line.qty > 1 && (
-                        <span className="text-ink-muted">{line.qty}&times; </span>
-                      )}
-                      {line.name}
-                      {line.variationName && (
-                        <span className="text-ink-muted">
-                          {' '}
-                          &middot; {line.variationName}
-                        </span>
-                      )}
-                    </span>
-                    <span className="shrink-0 text-sm tabular-nums text-ink">
-                      {formatCents(line.priceCents * line.qty)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <dl className="mt-3 flex flex-col gap-1 border-t border-ink/10 pt-3 text-sm">
-                <div className="flex justify-between text-ink-muted">
-                  <dt>Subtotal</dt>
-                  <dd className="tabular-nums">{formatCents(subtotal)}</dd>
-                </div>
-                {fulfillment === 'SHIPMENT' && (
-                  <div className="flex justify-between text-ink-muted">
-                    <dt>Shipping</dt>
-                    <dd>Free</dd>
-                  </div>
-                )}
-                <div className="flex justify-between font-medium text-ink">
-                  <dt>Total</dt>
-                  <dd className="tabular-nums">{formatCents(dueCents)}</dd>
-                </div>
-              </dl>
+            {/* Same collapsed receipt as /order's payment step — one checkout
+                language across the site. Collapsed by default so the payment
+                methods own this screen; the full bill is one tap away. */}
+            <div className="mt-1">
+              <ReceiptSummary
+                lines={state.lines.map((l) => ({
+                  key: l.key,
+                  label: l.name,
+                  detail: l.variationName || undefined,
+                  qty: l.qty,
+                  amountCents: l.priceCents * l.qty,
+                }))}
+                extras={
+                  fulfillment === 'SHIPMENT' ? [{ label: 'Shipping', value: 'Free' }] : []
+                }
+                totalCents={dueCents}
+                note="Sales tax is added when the card is charged."
+              />
             </div>
 
             <div className="mt-3 flex items-start justify-between gap-3 rounded-xl border border-ink/12 bg-cream/60 p-4">
