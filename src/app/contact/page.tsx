@@ -131,12 +131,12 @@ export default function ContactPage() {
             </Reveal>
           </div>
 
-          {/* Storefront image */}
+          {/* The room, with people in it — this page is the invitation to come in */}
           <Reveal className="group overflow-hidden md:col-span-6" y={32}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={photos.barWindow}
-              alt="The café bar beside the tall storefront windows looking out onto Main Street, Fairfield."
+              src={photos.contactLounge}
+              alt="Two friends laughing on the cream sofa beneath the blue neon Fusion sign, clinking a coffee cup against an iced drink, surrounded by ferns and trailing greenery."
               className="h-full min-h-[360px] w-full object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.04]"
             />
           </Reveal>

@@ -665,6 +665,10 @@ export const photos = {
   // and shelving are the real space; the garland, string lights, balloons and
   // table settings were added in post to show what a party in it looks like.
   partySpace: '/images/party-space.jpg',
+  // Two regulars under the neon, on /contact. Retouched only around them —
+  // the sign's power cord taken off the wall and greenery added. The people
+  // themselves are exactly as photographed and must stay that way.
+  contactLounge: '/images/contact-lounge.jpg',
   loungeNeon: '/images/lounge-neon.jpg',
   barWindow: '/images/bar-window.jpg',
   barEspresso: '/images/bar-espresso-flowers.jpg',
