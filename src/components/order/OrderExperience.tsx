@@ -17,7 +17,15 @@ import { onFieldEnter } from '@/components/formKeys';
 import { CitrusSlice } from '@/components/Citrus';
 import { specimenFor } from '@/components/SummerSpecimens';
 import SquareCard from './SquareCard';
+import SavedCardBlock from './SavedCardBlock';
 import WalletButtons, { type WalletContact } from './WalletButtons';
+import {
+  cardExpired,
+  deviceHandle,
+  fetchSavedCard,
+  forgetSavedCard,
+  type SavedCard,
+} from '@/lib/savedCard';
 import ItemSheet from './ItemSheet';
 import OrderChips from './OrderChips';
 import { useDragDismiss, useSheetChrome, useCloseAboveBreakpoint } from './sheet';
@@ -203,6 +211,19 @@ export default function OrderExperience() {
   // What just landed in the cart — drives the pill's count bump and the
   // screen-reader announcement. Add-to-cart feedback has to persist, not flash.
   const [lastAdded, setLastAdded] = useState<{ name: string } | null>(null);
+  // ---- Saved card (café only; see src/lib/savedCard.ts) ----
+  //
+  // `handle` is '' when storage is unavailable (private mode), which disables
+  // the whole feature rather than half-enabling it.
+  const [handle, setHandle] = useState('');
+  const [savedCard, setSavedCard] = useState<SavedCard | null>(null);
+  // Ticked by the buyer at checkout. Square requires explicit permission before
+  // a card may be put on file, so this starts false and is never pre-checked.
+  const [saveCardOptIn, setSaveCardOptIn] = useState(false);
+  // They chose to type a different card this time; keep the saved one on file
+  // but get it out of the way.
+  const [useAnotherCard, setUseAnotherCard] = useState(false);
+
   // null until mounted — the static export is prerendered at build time, so
   // resolving hours only after hydration keeps server and first client render
   // identical (same trick as the OpenStatus pill).
@@ -234,6 +255,10 @@ export default function OrderExperience() {
   // The name an express wallet gave us, for an order placed without ever
   // showing the name field. Sticky so a retry rebuilds the same payload.
   const walletName = useRef('');
+  // Which saved card is paying, if any. Like lastSourceId this must survive a
+  // retry unchanged: re-sending the same instrument under the same key is what
+  // makes an unconfirmed retry safe instead of a second charge.
+  const lastSavedCardId = useRef<string | undefined>(undefined);
   // Skips the persist effect's FIRST run. Both effects fire in the same mount
   // commit, and at that point `state.lines` is still the empty initial value —
   // so persisting would write `[]` over the saved cart before the hydrate
@@ -309,6 +334,24 @@ export default function OrderExperience() {
       /* storage full / disabled — cart still works in-memory */
     }
   }, [state.lines]);
+
+  // Ask once, after mount, whether this device has a card on file. Deliberately
+  // not gated on the checkout step: knowing the answer early means the payment
+  // screen opens with the card already there instead of popping in under the
+  // buyer's thumb. Failure is silent — no saved card is a normal state.
+  useEffect(() => {
+    if (!SQUARE_READY) return;
+    const h = deviceHandle();
+    if (!h) return;
+    setHandle(h);
+    let cancelled = false;
+    void fetchSavedCard(h).then((card) => {
+      if (!cancelled) setSavedCard(card);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
@@ -405,7 +448,11 @@ export default function OrderExperience() {
     }
   }
 
-  async function submitOrder(sourceId?: string, contact?: WalletContact | null) {
+  async function submitOrder(
+    sourceId?: string,
+    contact?: WalletContact | null,
+    savedCardId?: string,
+  ) {
     // An express wallet pays before the name field is ever shown, so the name
     // comes from the wallet instead. Parked in a ref rather than recomputed
     // per call: retryUnconfirmed() re-sends with no contact, and if that
@@ -417,6 +464,7 @@ export default function OrderExperience() {
     setStatus('submitting');
     setErrorMsg('');
     lastSourceId.current = sourceId;
+    lastSavedCardId.current = savedCardId;
 
     const lines = state.lines.map((l) => ({
       itemId: l.itemId,
@@ -441,6 +489,17 @@ export default function OrderExperience() {
     }
 
     const payload = {
+      // Saved cards ride alongside, never instead of, the price integrity the
+      // server enforces: the handle only chooses the instrument, not the total.
+      ...(handle
+        ? {
+            deviceHandle: handle,
+            // Only ask to store on a payment that is actually entering a new
+            // card — paying WITH the saved card has nothing new to save.
+            ...(saveCardOptIn && !savedCardId ? { saveCard: true } : {}),
+            ...(savedCardId ? { savedCardId } : {}),
+          }
+        : {}),
       customerName,
       pickup,
       tipCents,
@@ -460,11 +519,34 @@ export default function OrderExperience() {
         error?: string;
         label?: string;
         status?: string;
+        maxCents?: number;
+        savedCard?: SavedCard;
         lines?: { itemId: string; shownCents: number; actualCents: number | null }[];
       };
       if (res.status === 501) {
         // Keys not set yet — the expected pre-launch state.
         setStatus('not_configured');
+        return;
+      }
+      if (res.status === 409 && data.error === 'saved_card_unavailable') {
+        // The card behind this device is gone — removed at Square, disabled, or
+        // the handle no longer matches a customer. Nothing was created and
+        // nothing charged. Drop it and put the card form back.
+        setSavedCard(null);
+        setUseAnotherCard(true);
+        setErrorMsg('That saved card is no longer available. Please enter a card.');
+        setStatus('paying');
+        return;
+      }
+      if (res.status === 409 && data.error === 'saved_card_limit') {
+        // A remembered card has no login behind it, so the server caps it.
+        setUseAnotherCard(true);
+        setErrorMsg(
+          `A saved card can only cover orders up to ${formatCents(
+            data.maxCents ?? 0,
+          )}. Please enter a card for this one.`,
+        );
+        setStatus('paying');
         return;
       }
       if (res.status === 409 && data.error === 'closed') {
@@ -516,6 +598,12 @@ export default function OrderExperience() {
       dispatch({ type: 'clear' });
       idem.current = { sig: '', key: '' };
       lastSourceId.current = undefined;
+      lastSavedCardId.current = undefined;
+      // The server only returns this when a card was actually put on file, so
+      // the confirmation can promise a faster next time without guessing.
+      if (data.savedCard) setSavedCard(data.savedCard);
+      setSaveCardOptIn(false);
+      setUseAnotherCard(false);
       setCartOpen(false);
       setStatus('placed');
     } catch {
@@ -569,9 +657,31 @@ export default function OrderExperience() {
     setStatus(next.length ? 'price_changed' : 'idle');
   }
 
-  /** Re-send the SAME token under the SAME key — Square de-dupes a real hit. */
+  /** Re-send the SAME instrument under the SAME key — Square de-dupes a hit. */
   function retryUnconfirmed() {
-    void submitOrder(lastSourceId.current);
+    void submitOrder(lastSourceId.current, null, lastSavedCardId.current);
+  }
+
+  /** Pay with the card already on file for this device. No SDK involved. */
+  function paySaved() {
+    if (!savedCard) return;
+    void submitOrder(undefined, null, savedCard.cardId);
+  }
+
+  /**
+   * Forget the card. Disabled at Square FIRST — clearing only the local copy
+   * would leave a live card on file that the customer believes they removed.
+   */
+  async function forgetCard() {
+    if (!savedCard || !handle) return;
+    const ok = await forgetSavedCard(handle, savedCard.cardId);
+    if (ok) {
+      setSavedCard(null);
+      setUseAnotherCard(true);
+      setErrorMsg('');
+    } else {
+      setErrorMsg("We couldn't remove that card. Please try again.");
+    }
   }
 
   // Stable identities, via a latest-value ref rather than a dependency list.
@@ -587,6 +697,12 @@ export default function OrderExperience() {
     void submitRef.current(sourceId, contact);
   }, []);
   const onPayError = useCallback((m: string) => setErrorMsg(m), []);
+
+  // Whether to show the "type a card" form. Hidden only while a usable saved
+  // card is being offered — an expired one still needs the form, since Square
+  // keeps listing a card past its expiry and it cannot actually pay.
+  const showCardForm =
+    !savedCard || useAnotherCard || cardExpired(savedCard);
   // A wallet was tapped: Cash App may now take the buyer off-site, so save what
   // they'd typed. Read back (once) by the hydrate effect on the way in. Same
   // latest-ref trick — this identity must not change while they're typing.
@@ -1065,9 +1181,22 @@ export default function OrderExperience() {
                   </div>
                 ) : status === 'paying' ? (
                   <div className="animate-fade-up motion-reduce:animate-none">
-                    {/* Express checkout, then the card. Isolated: if no wallet
-                        is available this renders nothing and the card form
-                        below stands alone. Same onPaid → same charge. */}
+                    {/* Saved card first — for a returning customer it is the
+                        shortest path there is: one tap, no SDK, no typing. */}
+                    {savedCard && !useAnotherCard && (
+                      <SavedCardBlock
+                        card={savedCard}
+                        amountLabel={formatCents(dueCents)}
+                        busy={false}
+                        onPay={paySaved}
+                        onForget={() => void forgetCard()}
+                        onUseAnother={() => setUseAnotherCard(true)}
+                      />
+                    )}
+
+                    {/* Express checkout. The wallets stay up even when a card
+                        is saved — Apple Pay is just as fast, and hiding it from
+                        someone who prefers it would be a downgrade. */}
                     <WalletButtons
                       appId={SQ_APP_ID as string}
                       locationId={SQ_LOCATION_ID as string}
@@ -1076,16 +1205,48 @@ export default function OrderExperience() {
                       onPaid={onPaid}
                       onError={onPayError}
                       onWalletStart={onWalletStart}
-                      dividerLabel="or pay with card"
+                      dividerLabel={showCardForm ? 'or pay with card' : undefined}
                     />
-                    <SquareCard
-                      appId={SQ_APP_ID as string}
-                      locationId={SQ_LOCATION_ID as string}
-                      env={SQ_ENV}
-                      amountLabel={formatCents(dueCents)}
-                      onPaid={onPaid}
-                      onError={onPayError}
-                    />
+                    {/* The card form is what "Use a different card" reveals, so
+                        it has to be genuinely put away while a saved card is on
+                        offer — otherwise that link points at something already
+                        on screen. */}
+                    {showCardForm && (
+                      <SquareCard
+                        appId={SQ_APP_ID as string}
+                        locationId={SQ_LOCATION_ID as string}
+                        env={SQ_ENV}
+                        amountLabel={formatCents(dueCents)}
+                        onPaid={onPaid}
+                        onError={onPayError}
+                      />
+                    )}
+
+                    {/* Consent. Square requires explicit permission before a
+                        card goes on file — "linking cards on file without
+                        obtaining customer permission can result in your
+                        application being disabled without notice" — so this
+                        starts unticked and is never pre-selected. Hidden with
+                        no device handle (private browsing), where there would
+                        be nowhere to remember it. */}
+                    {showCardForm && handle && (
+                      <label className="mt-3 flex items-start gap-2.5 text-left">
+                        <input
+                          type="checkbox"
+                          checked={saveCardOptIn}
+                          onChange={(e) => setSaveCardOptIn(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-brick"
+                        />
+                        <span className="text-xs leading-snug text-ink-muted">
+                          {savedCard
+                            ? 'Remember this card instead for faster checkout. '
+                            : 'Save this card on this device for faster checkout. '}
+                          It stays with Square, never on this site, and anyone
+                          using this device could order with it.
+                        </span>
+                      </label>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => {

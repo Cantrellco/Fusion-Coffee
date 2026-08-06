@@ -118,6 +118,13 @@ import {
   type FulfilledBy,
   type ShippingAddress,
 } from '../../src/lib/shop';
+import {
+  SAVED_CARD_MAX_CENTS,
+  resolveSavedCard,
+  saveCardFromPayment,
+  validHandle,
+  type SavedCardSummary,
+} from './_cards';
 
 type Ctx = {
   request: Request;
@@ -171,6 +178,22 @@ type CheckoutBody = {
    * would deadlock checkout for that cart.
    */
   paymentAttempt?: number;
+  /**
+   * Saved cards, café orders only — see functions/api/_cards.ts for the whole
+   * design and its limits.
+   *
+   * `deviceHandle` is the opaque random string this browser keeps in
+   * localStorage; Square holds the mapping as a Customer's reference_id.
+   */
+  deviceHandle?: string;
+  /** The buyer ticked "save this card"; store it once the payment lands. */
+  saveCard?: boolean;
+  /**
+   * Pay with an already-saved card instead of a fresh token. NEVER trusted on
+   * its own: it is re-checked against the cards Square lists for deviceHandle's
+   * customer before a cent moves.
+   */
+  savedCardId?: string;
 };
 
 const json = (data: unknown, status = 200) =>
@@ -308,7 +331,12 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
   // Continuing would create a real, UNPAYABLE order: it lands in Order Manager,
   // the bar makes the drink, and nobody is ever charged. Refuse before creating
   // anything and report the state both pages already know how to render.
-  if (!body.sourceId) {
+  //
+  // A saved card counts: it is spendable without the browser tokenizing
+  // anything, so a request carrying one is not evidence of a stale build.
+  const wantsSavedCard =
+    kind === 'cafe' && Boolean(body.savedCardId) && validHandle(body.deviceHandle);
+  if (!body.sourceId && !wantsSavedCard) {
     return json({ error: 'not_configured' }, 501);
   }
 
@@ -489,6 +517,31 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
           ? `All ${split.printful} item(s) fulfilled by Printful.`
           : 'Packed in store.';
 
+  // ---- 0b. Resolve a saved card, BEFORE anything is created ---------------
+  //
+  // Ownership is proved here, not taken on trust: the card id the browser sent
+  // is only usable if Square lists it against the customer belonging to this
+  // device handle. A failure returns 409 and creates nothing, so the page can
+  // quietly fall back to asking for a card — far better than an order in Order
+  // Manager that nobody can pay for.
+  let savedCard: { customerId: string; card: SavedCardSummary } | null = null;
+  if (wantsSavedCard) {
+    const dueBeforeTax = subtotalCents + tipCents + shipCents;
+    if (dueBeforeTax > SAVED_CARD_MAX_CENTS) {
+      // A remembered card has no login behind it. Cap what one can spend so a
+      // lost phone is worth a round of coffee, not an afternoon.
+      return json({ error: 'saved_card_limit', maxCents: SAVED_CARD_MAX_CENTS }, 409);
+    }
+    savedCard = await resolveSavedCard(
+      { base, headers },
+      body.deviceHandle as string,
+      body.savedCardId as string,
+    );
+    if (!savedCard) {
+      return json({ error: 'saved_card_unavailable' }, 409);
+    }
+  }
+
   // ---- 1. Create the order ------------------------------------------------
   const serviceCharges: Record<string, unknown>[] = [];
   if (tipCents > 0) {
@@ -588,10 +641,11 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
   }
 
   // ---- 2. Take the payment ------------------------------------------------
-  // Needs the Web Payments SDK card token (body.sourceId) from the on-page card
-  // form. Without one, stop here and report the order was created but payment
-  // is pending — the pre-launch state both pages know how to show.
-  if (!body.sourceId) {
+  // Needs either the Web Payments SDK card token (body.sourceId) from the
+  // on-page card form, or a saved card resolved above. Without either, stop
+  // here and report the order was created but payment is pending — the
+  // pre-launch state both pages know how to show.
+  if (!body.sourceId && !savedCard) {
     return json(
       {
         status: 'order_created_payment_pending',
@@ -617,7 +671,10 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
       idempotency_key: `${idem}-pay-${
         Number.isInteger(body.paymentAttempt) ? body.paymentAttempt : 0
       }`,
-      source_id: body.sourceId,
+      // A card on file is spent by its own id, and Square requires the customer
+      // it belongs to alongside it.
+      source_id: savedCard ? savedCard.card.cardId : body.sourceId,
+      ...(savedCard ? { customer_id: savedCard.customerId } : {}),
       order_id: orderData.order.id,
       location_id: env.SQUARE_LOCATION_ID,
       amount_money: { amount, currency: 'USD' },
@@ -636,10 +693,37 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
     return json({ error: 'payment_failed', detail: paymentData.errors }, 502);
   }
 
+  // ---- 3. Remember the card, if they asked --------------------------------
+  //
+  // Strictly AFTER the money is taken, and strictly best-effort. The card is
+  // created from the finished PAYMENT id (a token is single use and has just
+  // been spent). Anything that goes wrong here — Square refusing, a customer
+  // that won't create, a network blip — leaves a paid order and no saved card,
+  // which is a mild disappointment rather than a lost sale. It must never be
+  // allowed to turn a completed payment into an error response.
+  let stored: SavedCardSummary | null = null;
+  if (
+    kind === 'cafe' &&
+    body.saveCard === true &&
+    !savedCard &&
+    body.sourceId &&
+    validHandle(body.deviceHandle)
+  ) {
+    stored = await saveCardFromPayment(
+      { base, headers },
+      body.deviceHandle,
+      paymentData.payment.id,
+      body.customerName.trim(),
+    );
+  }
+
   return json({
     status: 'paid',
     orderId: orderData.order.id,
     paymentId: paymentData.payment.id,
     totalCents: amount,
+    // Present only when a card was just remembered, so the page can show it
+    // straight away instead of re-fetching.
+    ...(stored ? { savedCard: stored } : {}),
   });
 };
