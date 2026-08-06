@@ -46,8 +46,8 @@ export default function PartyPage() {
           <Reveal className="group overflow-hidden md:col-span-7" y={32}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={photos.loungeNeon}
-              alt="The Fusion Coffee lounge set for a gathering — a cream sofa and wood-stump stools beneath the glowing neon sign, framed by hanging ferns."
+              src={photos.partySpace}
+              alt="The café's exposed-brick room dressed for a private party — a eucalyptus and dried-flower garland along the wall, warm string lights, cream and terracotta balloons, and long oak tables set with candles and small floral arrangements."
               className="aspect-[4/3] w-full object-cover transition-transform duration-700 ease-out-expo group-hover:scale-[1.03] md:aspect-[5/4]"
             />
           </Reveal>

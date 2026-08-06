@@ -661,6 +661,10 @@ export const photos = {
   // The 207 East Main Street frontage — the lead image on /about. Regraded
   // from the shop's own midday photo to the site's warm, low-contrast palette.
   storefront: '/images/storefront.jpg',
+  // The brick-wall room on /party, styled for a booking. The room, furniture
+  // and shelving are the real space; the garland, string lights, balloons and
+  // table settings were added in post to show what a party in it looks like.
+  partySpace: '/images/party-space.jpg',
   loungeNeon: '/images/lounge-neon.jpg',
   barWindow: '/images/bar-window.jpg',
   barEspresso: '/images/bar-espresso-flowers.jpg',
