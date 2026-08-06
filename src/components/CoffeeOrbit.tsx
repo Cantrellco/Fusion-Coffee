@@ -107,9 +107,9 @@ export default function CoffeeOrbit({
   // Phones get a 15fps 720p encode (~4.8 MB) instead of the 30fps 1080p
   // master (17.9 MB) — both the biggest data saving on the site and half
   // the frames for the scrub to chase. Safe to swap in a mount effect: the
-  // element ships preload="none" and only calls load() from the approach
-  // observer, which registers after hydration, so the source is always
-  // final before any bytes are requested.
+  // element ships preload="none" and nothing fetches until the loader effect
+  // below runs, which is after hydration, so the choice is always final
+  // before any bytes are requested.
   const [mobileClip, setMobileClip] = useState(false);
   // prefers-reduced-motion: when set we never scrub — the section collapses
   // to a single static screen (see the style prop) and both effects below
@@ -127,35 +127,34 @@ export default function CoffeeOrbit({
     const apply = () => {
       setScrubVh(mq.matches ? SCRUB_SCROLL_VH_MOBILE : SCRUB_SCROLL_VH);
       setMobileClip(mq.matches);
-      // If the clip already started loading under the old source, re-select:
-      // <source> edits alone don't re-evaluate an in-flight media element.
-      const video = videoRef.current;
-      if (video && video.readyState > 0) {
-        const wantMobile = mq.matches;
-        const isMobileSrc = video.currentSrc.includes('-720');
-        if (wantMobile !== isMobileSrc) {
-          // Let React swap the <source>, then reload on the next frame.
-          requestAnimationFrame(() => {
-            try {
-              video.load();
-            } catch {
-              /* ignore */
-            }
-          });
-        }
-      }
+      // Re-selecting the source on a breakpoint change is the loader effect's
+      // job now — `mobileClip` is one of its deps, so flipping it tears down
+      // the old clip (and its blob) and pulls the other one.
     };
     apply();
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
   }, []);
 
-  // Defer the clip until the section is within ~1.5 screens, so the majority of
-  // homepage visitors who never reach it don't pay for it — but it's fully
-  // buffered before anyone actually scrubs. The element ships with
-  // preload="none"; we upgrade to "auto" + load() on approach. The scrub effect
-  // below already re-arms on durationchange/canplay, so metadata arriving late
-  // is handled.
+  // Clip loader. Defers the download until the section is within ~1.5 screens,
+  // so the majority of homepage visitors who never reach it don't pay for it.
+  //
+  // It fetches the clip and hands the video a `blob:` URL rather than pointing
+  // `src` at the file, and that indirection is load-bearing, not a nicety:
+  // Chrome derives `video.seekable` from the SERVER'S Range support, not from
+  // what it has buffered. Cloudflare Pages does not answer Range requests for
+  // these mp4s — an explicit `Range:` GET comes back `200` with the whole body
+  // and no `accept-ranges` — so on both live Pages deployments `seekable` was
+  // `[[0, 0]]` with the clip fully buffered, every `currentTime` write clamped
+  // to 0, and the orbit sat frozen on frame 0 however far you scrolled. Bytes
+  // the browser already owns are always seekable, so a blob: URL sidesteps the
+  // host entirely. Measured on the live URL: direct src `seekable [0,0]`, seek
+  // to 5.0s → 0; blob: `seekable [0,10]`, seek to 5.0s → 5.0.
+  //
+  // The trade is that the whole clip must arrive before the first frame instead
+  // of streaming in. The poster covers that window and the fetch starts 1.5
+  // screens out. GitHub Pages does honour Range, so the preview never showed
+  // this — see the Range note in the deploy memory.
   useEffect(() => {
     const section = sectionRef.current;
     const video = videoRef.current;
@@ -163,23 +162,71 @@ export default function CoffeeOrbit({
     // Reduced motion = no scrub, so never pull the clip at all — the poster is
     // the whole show (also the respectful call on data).
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const url = `${basePath}${mobileClip ? '-720' : ''}.mp4`;
+    const ac = new AbortController();
+    let objectUrl: string | null = null;
+
+    // If the fetch fails (offline, 404, quota), fall back to the plain
+    // <source> path. On a Range-honouring host that still scrubs; on Pages it
+    // degrades to the poster, which is what it already did.
+    const useDirectSource = () => {
+      try {
+        video.preload = 'auto';
+        video.removeAttribute('src');
+        video.load();
+      } catch {
+        /* ignore */
+      }
+    };
+
+    const pull = async () => {
+      try {
+        const res = await fetch(url, { signal: ac.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        if (ac.signal.aborted) return;
+        objectUrl = URL.createObjectURL(blob);
+        // Order matters: `src` first. Flipping `preload` to 'auto' while the
+        // element still has only the child <source> makes it start fetching
+        // the file directly, which we then abort a line later — a stray
+        // request that briefly competes for bandwidth.
+        video.src = objectUrl; // beats the child <source>
+        video.preload = 'auto';
+        video.load();
+      } catch (err) {
+        if ((err as { name?: string } | null)?.name === 'AbortError') return;
+        useDirectSource();
+      }
+    };
+
     const io = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
-          video.preload = 'auto';
-          try {
-            video.load();
-          } catch {
-            /* ignore */
-          }
           io.disconnect();
+          void pull();
         }
       },
       { rootMargin: '150% 0px 150% 0px' },
     );
     io.observe(section);
-    return () => io.disconnect();
-  }, []);
+
+    return () => {
+      ac.abort();
+      io.disconnect();
+      if (objectUrl) {
+        // Detach before revoking — revoking a URL the element still holds
+        // leaves it decoding a source that no longer exists.
+        try {
+          video.removeAttribute('src');
+          video.load();
+        } catch {
+          /* ignore */
+        }
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [basePath, mobileClip]);
 
   useEffect(() => {
     const section = sectionRef.current;
