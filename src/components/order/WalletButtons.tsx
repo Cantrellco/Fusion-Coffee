@@ -156,6 +156,7 @@ export default function WalletButtons({
   onWalletStart,
   referenceId = 'fusion-coffee-order',
   requestShippingContact = false,
+  breakdown,
   label = 'Express checkout',
   footnote,
   dividerLabel,
@@ -176,6 +177,13 @@ export default function WalletButtons({
   onWalletStart?: () => void;
   /** Rides along to Square so café and merch orders are told apart. */
   referenceId?: string;
+  /**
+   * Cost rows mirrored into the wallet's own sheet (Apple HIG: cost rows
+   * only, never a product list). When present, the Face ID sheet shows the
+   * exact Subtotal / Tip / Tax the page's receipt shows — the strongest
+   * trust signal available, and free.
+   */
+  breakdown?: { subtotalCents: number; tipCents: number; taxCents: number };
   /** Ask the wallet for a delivery address. Merch shipments only. */
   requestShippingContact?: boolean;
   label?: string;
@@ -199,6 +207,12 @@ export default function WalletButtons({
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const gpayId = `wallet-gpay-${uid}`;
   const cashId = `wallet-cashapp-${uid}`;
+  // Primitives, not the object: a fresh `breakdown` literal on an unrelated
+  // parent render (an error message appearing, say) must not tear down and
+  // re-attach every wallet mid-payment. Only the NUMBERS changing matters.
+  const bSub = breakdown?.subtotalCents ?? -1;
+  const bTip = breakdown?.tipCents ?? -1;
+  const bTax = breakdown?.taxCents ?? -1;
   const [avail, setAvail] = useState({ apple: false, google: false, cashapp: false });
   // True once every wallet has had its turn to initialize.
   //
@@ -230,11 +244,23 @@ export default function WalletButtons({
       // one thing the café checkout cannot do without. requestShippingContact
       // additionally makes it collect a delivery address, which is only honest
       // to ask for when something is actually being posted.
+      const money = (cents: number) => (cents / 100).toFixed(2);
       const req = () =>
         payments.paymentRequest({
           countryCode: 'US',
           currencyCode: 'USD',
           total: { amount, label: 'Fusion Coffee' },
+          ...(bSub >= 0
+            ? {
+                lineItems: [
+                  { label: 'Subtotal', amount: money(bSub) },
+                  ...(bTip > 0 ? [{ label: 'Tip', amount: money(bTip) }] : []),
+                ],
+                ...(bTax > 0
+                  ? { taxLineItems: [{ label: 'Tax', amount: money(bTax) }] }
+                  : {}),
+              }
+            : {}),
           requestBillingContact: true,
           ...(requestShippingContact ? { requestShippingContact: true } : {}),
         });
@@ -353,6 +379,9 @@ export default function WalletButtons({
     locationId,
     env,
     amountCents,
+    bSub,
+    bTip,
+    bTax,
     referenceId,
     requestShippingContact,
     gpayId,
@@ -445,6 +474,15 @@ export default function WalletButtons({
         <div id={gpayId} className={slot(avail.google)} />
         <div id={cashId} className={slot(avail.cashapp)} />
       </div>
+
+      {/* Cash App Pay leaves the site (deep-links into the Cash App on a
+          phone). Baymard's no-surprise-redirects rule: say so before the tap,
+          not after. */}
+      {avail.cashapp && (
+        <p className="mt-1.5 text-center text-[11px] text-ink-muted">
+          Cash App Pay opens the Cash App to approve.
+        </p>
+      )}
 
       {footnote && (
         <p className="mt-2 text-center text-xs text-ink-muted">{footnote}</p>

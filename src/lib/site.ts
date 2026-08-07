@@ -684,7 +684,9 @@ export const photos = {
 };
 
 export const logo = {
-  neon: '/logo/fusion-neon.png',
+  // 300px WebP (20KB) — the PNG original was 540px/154KB for a logo that
+  // renders at 58-150px.
+  neon: '/logo/fusion-neon.webp',
   neonSquare: '/logo/fusion-neon-square.jpg',
 };
 
@@ -815,3 +817,20 @@ export function jsonLd() {
     ],
   };
 }
+
+// Shared Open Graph base. Next shallow-merges the `openGraph` metadata key,
+// so a page that sets its own og title/description must respread these or
+// silently lose og:image and siteName.
+export const ogBase = {
+  type: 'website' as const,
+  siteName: 'Fusion Coffee',
+  locale: 'en_US',
+  images: [
+    {
+      url: '/og.jpg',
+      width: 1200,
+      height: 630,
+      alt: 'Fusion Coffee — specialty coffee in downtown Fairfield, Illinois',
+    },
+  ],
+};

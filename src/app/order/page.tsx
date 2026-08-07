@@ -1,13 +1,20 @@
 import type { Metadata } from 'next';
 import PageHero from '@/components/PageHero';
 import OrderExperience from '@/components/order/OrderExperience';
-import { site } from '@/lib/site';
+import { site, ogBase } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Order Online',
   description:
     'Order Fusion Coffee ahead for pickup — specialty espresso, matcha, breakfast sandwiches and eats, made fresh in downtown Fairfield, IL. Skip the line.',
   alternates: { canonical: '/order/' },
+  openGraph: {
+    ...ogBase,
+    url: '/order/',
+    title: 'Order Online · Fusion Coffee',
+    description:
+      'Order Fusion Coffee ahead for pickup — specialty espresso, matcha, breakfast sandwiches and eats, made fresh in downtown Fairfield, IL. Skip the line.',
+  },
 };
 
 export default function OrderPage() {

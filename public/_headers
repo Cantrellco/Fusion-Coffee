@@ -1,0 +1,9 @@
+# Content-hashed build assets never change under the same name — let repeat
+# visitors skip the 4h revalidation Cloudflare Pages defaults to.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Both hosts are HTTPS-only behind Cloudflare; no includeSubDomains because
+# the wildcard record still points at Square's old origin.
+/*
+  Strict-Transport-Security: max-age=31536000

@@ -4,13 +4,20 @@ import Reveal from '@/components/Reveal';
 import Button from '@/components/Button';
 import { Bean } from '@/components/icons';
 import { CornerBotanical, Sprig } from '@/components/Botanical';
-import { site, photos } from '@/lib/site';
+import { site, photos, ogBase } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'About',
   description:
     'Fusion Coffee is a curated coffee experience in the heart of downtown Fairfield, Illinois — fine ingredients, made to order, in a warm and welcoming space.',
   alternates: { canonical: '/about/' },
+  openGraph: {
+    ...ogBase,
+    url: '/about/',
+    title: 'About · Fusion Coffee',
+    description:
+      'Fusion Coffee is a curated coffee experience in the heart of downtown Fairfield, Illinois — fine ingredients, made to order, in a warm and welcoming space.',
+  },
 };
 
 const ethos = [

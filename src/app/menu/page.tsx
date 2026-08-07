@@ -5,13 +5,20 @@ import Reveal from '@/components/Reveal';
 import Button from '@/components/Button';
 import SummerMenu from '@/components/SummerMenu';
 import { CornerBotanical, Sprig } from '@/components/Botanical';
-import { site, regularMenu } from '@/lib/site';
+import { site, regularMenu, ogBase } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Menu',
   description:
     "The full Fusion Coffee menu — specialty espresso, non-coffee, tea, breakfast sandwiches, açaí bowls and eats, plus this season's Summer Menu. Fairfield, IL.",
   alternates: { canonical: '/menu/' },
+  openGraph: {
+    ...ogBase,
+    url: '/menu/',
+    title: 'Menu · Fusion Coffee',
+    description:
+      "The full Fusion Coffee menu — specialty espresso, non-coffee, tea, breakfast sandwiches, açaí bowls and eats, plus this season's Summer Menu.",
+  },
 };
 
 // Name on the left, price on the right — the repeating row used across the menu.

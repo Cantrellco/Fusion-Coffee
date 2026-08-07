@@ -89,6 +89,9 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
   } catch {
     return json({ error: 'bad_request' }, 400);
   }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return json({ error: 'bad_request' }, 400);
+  }
 
   const handle = body.h;
   const cardId = body.cardId;

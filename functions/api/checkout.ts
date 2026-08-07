@@ -199,7 +199,9 @@ type CheckoutBody = {
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    // Payment responses carry per-customer ids; same no-store convention as
+    // quote.ts and saved-card.ts.
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   });
 
 function squareBase(env: Ctx['env']): string {
@@ -295,6 +297,13 @@ async function fetchVariationPrices(
   return prices;
 }
 
+// Non-POST verbs (scanners, typed-in URLs) otherwise fall through to the
+// static 404 page — 67KB of HTML from an API path. Answer in JSON instead.
+export const onRequest = async (ctx: Ctx): Promise<Response> =>
+  ctx.request.method === 'POST'
+    ? onRequestPost(ctx)
+    : json({ error: 'method_not_allowed' }, 405);
+
 export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
   const { env, request } = ctx;
 
@@ -302,6 +311,11 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
   try {
     body = (await request.json()) as CheckoutBody;
   } catch {
+    return json({ error: 'bad_request' }, 400);
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    // `null`/arrays/scalars are valid JSON but not a payload; without this,
+    // `body.kind` throws and the Worker answers 500 text/plain.
     return json({ error: 'bad_request' }, 400);
   }
 

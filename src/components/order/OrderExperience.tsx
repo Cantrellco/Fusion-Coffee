@@ -27,6 +27,17 @@ import {
   forgetSavedCard,
   type SavedCard,
 } from '@/lib/savedCard';
+import {
+  rememberedName,
+  rememberName,
+  rememberedTip,
+  rememberTip,
+  rememberedPickup,
+  rememberPickup,
+  rememberedLastOrder,
+  rememberLastOrder,
+  type TipChoice,
+} from '@/lib/orderPrefs';
 import ItemSheet from './ItemSheet';
 import OrderChips from './OrderChips';
 import { useDragDismiss, useSheetChrome, useCloseAboveBreakpoint } from './sheet';
@@ -67,13 +78,53 @@ const CART_KEY = 'fusion-cart-v2';
 // open cart sheet would not — the customer would land on the menu wondering
 // what happened. Read once on mount and deleted. See WalletButtons.tsx.
 const CHECKOUT_KEY = 'fusion-checkout-v1';
-const TIP_OPTIONS = [0, 15, 18, 20];
+
+// Square's own "Smart Tips" split, mirrored from the shop's POS: percentages
+// are unjudgeable on a $4.50 latte (18% = $0.81), so under $10 the presets are
+// dollar amounts; at $10+ they're percentages shown WITH the computed dollar.
+// Nothing is ever preselected — half of consumers already report feeling
+// manipulated by tip prompts, and a pre-ticked one is how that happens.
+const TIP_PCTS = [15, 18, 20];
+const TIP_FLATS = [100, 200, 300];
+const SMART_TIP_THRESHOLD = 1000;
+
 const PICKUP_OPTIONS = [
   'As soon as possible',
   'In 30 minutes',
   'In 45 minutes',
   'In 1 hour',
 ];
+// Flat prep estimate for the ASAP slot — no queue data exists to be smarter
+// with, hence the "~" everywhere this is shown.
+const PREP_MINUTES = 10;
+
+/** "12:25 PM" — the clock time a pickup option resolves to right now. */
+function pickupClock(option: string, from = new Date()): string {
+  const mins =
+    option === 'In 30 minutes'
+      ? 30
+      : option === 'In 45 minutes'
+        ? 45
+        : option === 'In 1 hour'
+          ? 60
+          : PREP_MINUTES;
+  const t = new Date(from.getTime() + mins * 60_000);
+  // Round up to the next 5 minutes — "12:23" reads like a promise nobody
+  // actually made.
+  const rounded = new Date(Math.ceil(t.getTime() / 300_000) * 300_000);
+  return rounded.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'America/Chicago',
+  });
+}
+
+/** The human note the barista reads: token resolved to a clock time. */
+function pickupNote(option: string): string {
+  return option === 'As soon as possible'
+    ? `ASAP (~${pickupClock(option)})`
+    : `Around ${pickupClock(option)}`;
+}
 
 // Public Square config (safe in the browser), baked at build from .env.local.
 // When present, checkout shows Square's real card form; when absent, it falls
@@ -91,6 +142,7 @@ type CartAction =
   | { type: 'inc'; key: string }
   | { type: 'dec'; key: string }
   | { type: 'remove'; key: string }
+  | { type: 'restore'; line: CartLine }
   | { type: 'clear' };
 
 function cartReducer(state: CartState, action: CartAction): CartState {
@@ -140,6 +192,12 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       };
     case 'remove':
       return { lines: state.lines.filter((l) => l.key !== action.key) };
+    // Undo for a removal: the exact line object returns. Appended rather than
+    // re-inserted at its old index — the list is short and a stable, simple
+    // rule beats tracking positions.
+    case 'restore':
+      if (state.lines.some((l) => l.key === action.line.key)) return state;
+      return { lines: [...state.lines, action.line] };
     case 'clear':
       return { lines: [] };
     default:
@@ -193,9 +251,34 @@ function newIdempotencyKey(): string {
 
 export default function OrderExperience() {
   const [state, dispatch] = useReducer(cartReducer, { lines: [] });
-  const [tipPercent, setTipPercent] = useState(15);
+  // Nothing preselected; the device remembers last time's choice instead.
+  const [tip, setTip] = useState<TipChoice>({ mode: 'none' });
+  // The custom-tip entry field, shown when "Other" is active.
+  const [customTipOpen, setCustomTipOpen] = useState(false);
+  const [customTipText, setCustomTipText] = useState('');
   const [pickup, setPickup] = useState(PICKUP_OPTIONS[0]);
   const [name, setName] = useState('');
+  // Exact tax from /api/quote (display-only — the server still charges
+  // Square's own total). null = quote unavailable, show the tax note instead.
+  const [quote, setQuote] = useState<{
+    subtotalCents: number;
+    tipCents: number;
+    taxCents: number;
+  } | null>(null);
+  // A just-removed line, held for the 5-second Undo strip.
+  const [removedLine, setRemovedLine] = useState<CartLine | null>(null);
+  // Snapshot of the completed order, taken BEFORE the cart clears, so the
+  // confirmation can show the real receipt and the real charged total.
+  const [placedOrder, setPlacedOrder] = useState<{
+    name: string;
+    readyLabel: string;
+    pickupOption: string;
+    lines: CartLine[];
+    tipCents: number;
+    totalCents: number;
+  } | null>(null);
+  // Last completed order, for the one-tap reorder pill on an empty bag.
+  const [lastOrder, setLastOrder] = useState<ReturnType<typeof rememberedLastOrder>>(null);
   const [status, setStatus] = useState<CheckoutStatus>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   // What the server said changed price, so the panel can name it rather than
@@ -244,7 +327,7 @@ export default function OrderExperience() {
   // cart being charged: a retry of the same order reuses it (Square de-dupes),
   // while changing the tip or a quantity earns a new one instead of a hard
   // failure. `sourceId` is deliberately outside the signature — see retry().
-  const idem = useRef<{ sig: string; key: string }>({ sig: '', key: '' });
+  const idem = useRef<{ sig: string; key: string; note?: string }>({ sig: '', key: '' });
   // The card token from the in-flight attempt. A retry MUST reuse it: a fresh
   // token plus the same key is the one combination Square refuses, and a fresh
   // token plus a fresh key is how you charge someone twice.
@@ -288,6 +371,17 @@ export default function OrderExperience() {
       /* ignore malformed cache */
     }
 
+    // Device-remembered defaults — the Amazon model, one phone at a time:
+    // never re-ask what the customer answered last visit. All read AFTER
+    // mount so the static export's first paint stays hydration-identical.
+    const savedName = rememberedName();
+    if (savedName) setName(savedName);
+    const savedTip = rememberedTip();
+    if (savedTip) setTip(savedTip);
+    const savedPickup = rememberedPickup();
+    if (savedPickup && PICKUP_OPTIONS.includes(savedPickup)) setPickup(savedPickup);
+    setLastOrder(rememberedLastOrder(validLine));
+
     // Landing back from a wallet that took the buyer off-site (Cash App on a
     // phone). The express buttons live on the PAYMENT step, so that is the step
     // to come back to — anything less and the wallet's token is dispatched into
@@ -302,7 +396,8 @@ export default function OrderExperience() {
       const saved = JSON.parse(raw) as {
         name?: unknown;
         pickup?: unknown;
-        tipPercent?: unknown;
+        tip?: TipChoice;
+        tipPercent?: unknown; // pre-overhaul marker shape
       };
       // The payment step needs a name, and the server needs the shop open.
       // Without either, resuming would land them on a step that can't pay.
@@ -312,8 +407,10 @@ export default function OrderExperience() {
       if (typeof saved?.pickup === 'string' && PICKUP_OPTIONS.includes(saved.pickup)) {
         setPickup(saved.pickup);
       }
-      if (typeof saved?.tipPercent === 'number' && TIP_OPTIONS.includes(saved.tipPercent)) {
-        setTipPercent(saved.tipPercent);
+      if (saved?.tip && typeof saved.tip === 'object') {
+        setTip(saved.tip);
+      } else if (typeof saved?.tipPercent === 'number' && saved.tipPercent > 0) {
+        setTip({ mode: 'pct', pct: saved.tipPercent });
       }
       setStatus('paying');
       // Below lg the whole checkout lives inside the cart sheet. Harmless at lg
@@ -353,6 +450,13 @@ export default function OrderExperience() {
       cancelled = true;
     };
   }, []);
+
+  // The Undo strip lives five seconds, then the removal is final.
+  useEffect(() => {
+    if (!removedLine) return;
+    const t = window.setTimeout(() => setRemovedLine(null), 5000);
+    return () => window.clearTimeout(t);
+  }, [removedLine]);
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
@@ -402,8 +506,85 @@ export default function OrderExperience() {
     () => state.lines.reduce((sum, l) => sum + l.priceCents * l.qty, 0),
     [state.lines],
   );
-  const tipCents = Math.round((subtotal * tipPercent) / 100);
-  const dueCents = subtotal + tipCents;
+  const tipCents =
+    tip.mode === 'pct'
+      ? Math.round((subtotal * tip.pct) / 100)
+      : tip.mode === 'cents'
+        ? Math.min(tip.cents, subtotal) // server clamps too; agree with it
+        : 0;
+  // The quote only counts while it describes THIS cart — a stale answer for a
+  // previous subtotal/tip must not dress up the wrong total.
+  const taxCents =
+    quote && quote.subtotalCents === subtotal && quote.tipCents === tipCents
+      ? quote.taxCents
+      : null;
+  const dueCents = subtotal + tipCents + (taxCents ?? 0);
+
+  // Exact tax, quoted ahead of the payment step so every surface — totals,
+  // receipt, Pay button, and the Apple/Google sheet — shows the number the
+  // card will actually be charged. Baymard's #1 abandonment cause is a total
+  // that moves after commitment; "tax added later" was exactly that. Debounced
+  // behind stepper taps; display-only, so a failed quote just reverts to the
+  // old tax note.
+  const quoteSeq = useRef(0);
+  useEffect(() => {
+    if (!SQUARE_READY || state.lines.length === 0) {
+      setQuote(null);
+      return;
+    }
+    const seq = ++quoteSeq.current;
+    const lines = state.lines.map((l) => ({
+      itemId: l.itemId,
+      name: l.name,
+      qty: l.qty,
+      priceCents: l.priceCents,
+      modifiers: l.modifiers,
+      squareCatalogObjectId: l.squareCatalogObjectId ?? null,
+    }));
+    const timer = window.setTimeout(() => {
+      void fetch('/api/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lines, tipCents }),
+      })
+        .then(async (res) => {
+          // The quote re-prices the same way checkout does, so it catches a
+          // stale cart (usually a reorder after a menu change) EARLY — at
+          // browse time, with the same repricing panel, instead of at the
+          // moment of payment.
+          if (res.status === 409 && seq === quoteSeq.current) {
+            const body = (await res.json().catch(() => null)) as {
+              error?: string;
+              lines?: { itemId: string; shownCents: number; actualCents: number | null }[];
+            } | null;
+            if (body?.error === 'price_changed') applyReprice(body.lines ?? []);
+            return null;
+          }
+          return res.ok ? res.json() : null;
+        })
+        .then((data: { subtotalCents?: number; tipCents?: number; taxCents?: number } | null) => {
+          if (seq !== quoteSeq.current) return; // superseded by a newer cart
+          if (
+            data &&
+            typeof data.subtotalCents === 'number' &&
+            typeof data.taxCents === 'number'
+          ) {
+            setQuote({
+              subtotalCents: data.subtotalCents,
+              tipCents: data.tipCents ?? 0,
+              taxCents: data.taxCents,
+            });
+          } else {
+            setQuote(null);
+          }
+        })
+        .catch(() => {
+          if (seq === quoteSeq.current) setQuote(null);
+        });
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [state.lines, tipCents]);
+
   const itemCount = state.lines.reduce((n, l) => n + l.qty, 0);
   // Before hydration resolves the hours, assume open — the button needs JS to
   // do anything anyway, and beginCheckout re-checks the clock for real.
@@ -485,7 +666,11 @@ export default function OrderExperience() {
       pickup,
     });
     if (idem.current.sig !== sig) {
-      idem.current = { sig, key: newIdempotencyKey() };
+      // The pickup note resolves "In 30 minutes" to a CLOCK time, so it is
+      // frozen alongside the key: a retry a minute later must re-send the
+      // byte-identical body, or Square sees a reused key with a different
+      // order and errors instead of de-duping.
+      idem.current = { sig, key: newIdempotencyKey(), note: pickupNote(pickup) };
       paymentAttempt.current = 0;
     }
 
@@ -502,7 +687,7 @@ export default function OrderExperience() {
           }
         : {}),
       customerName,
-      pickup,
+      pickup: idem.current.note || pickupNote(pickup),
       tipCents,
       subtotalCents: subtotal,
       sourceId,
@@ -596,6 +781,34 @@ export default function OrderExperience() {
         setStatus('not_configured');
         return;
       }
+      // Snapshot BEFORE the cart clears: the confirmation shows the real
+      // receipt and the real charged total (the server's number, tax and
+      // all), and the device remembers this order for one-tap reordering.
+      const totalCents =
+        typeof (data as { totalCents?: number }).totalCents === 'number'
+          ? (data as { totalCents: number }).totalCents
+          : dueCents;
+      setPlacedOrder({
+        name: customerName,
+        readyLabel: pickupClock(pickup),
+        pickupOption: pickup,
+        lines: state.lines,
+        tipCents,
+        totalCents,
+      });
+      rememberName(customerName);
+      rememberTip(tip);
+      rememberPickup(pickup);
+      const snapshot = {
+        lines: state.lines,
+        tip,
+        pickup,
+        totalCents,
+        savedAt: Date.now(),
+      };
+      rememberLastOrder(snapshot);
+      setLastOrder(snapshot);
+
       dispatch({ type: 'clear' });
       idem.current = { sig: '', key: '' };
       lastSourceId.current = undefined;
@@ -718,12 +931,21 @@ export default function OrderExperience() {
     !closed &&
     itemCount > 0 &&
     (status === 'paying' || status === 'submitting');
+
+  // Which way the step change is travelling, for the push animation. Read
+  // during render (before the effect updates it), so the bag animates
+  // back-in only when it was just left for the payment screen.
+  const wasPayStep = useRef(false);
+  const returningToBag = !payStep && wasPayStep.current;
+  useEffect(() => {
+    wasPayStep.current = payStep;
+  }, [payStep]);
   // A wallet was tapped: Cash App may now take the buyer off-site, so save what
   // they'd typed. Read back (once) by the hydrate effect on the way in. Same
   // latest-ref trick — this identity must not change while they're typing.
-  const typed = useRef({ name, pickup, tipPercent });
+  const typed = useRef({ name, pickup, tip });
   useEffect(() => {
-    typed.current = { name, pickup, tipPercent };
+    typed.current = { name, pickup, tip };
   });
   const onWalletStart = useCallback(() => {
     try {
@@ -734,26 +956,108 @@ export default function OrderExperience() {
   }, []);
 
   if (status === 'placed') {
+    // Built around the hand-off, not the receipt: with no accounts and no SMS
+    // pipeline, the NAME is the claim ticket and the clock time is the whole
+    // promise. Nothing here implies live tracking, because nothing powers it.
+    const first =
+      (placedOrder?.name ?? name).split(' ')[0] ||
+      walletName.current.split(' ')[0] ||
+      'friend';
     return (
-      <section className="bg-cream py-20 md:py-28">
+      <section className="bg-cream py-16 md:py-24">
+        <style>{`
+          @keyframes checkdraw {
+            from { stroke-dashoffset: 26; }
+            to { stroke-dashoffset: 0; }
+          }
+          .check-path {
+            stroke-dasharray: 26;
+            animation: checkdraw 0.5s cubic-bezier(0.2, 0, 0, 1) 0.15s both;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .check-path { animation: none; stroke-dashoffset: 0; }
+          }
+        `}</style>
         <div className="mx-auto max-w-xl px-5 text-center sm:px-8">
-          <p className="eyebrow justify-center text-brick-deep">Order received</p>
-          <h2 className="mt-4 font-display text-fluid-xl text-ink">
-            {/* An express order never showed the name field — the wallet's name
-                (or Cash App handle) is who this is, so greet them by it. */}
-            Thanks, {name.split(' ')[0] || walletName.current.split(' ')[0] || 'friend'} —
-            we&apos;re on it.
+          {/* One celebratory moment, played once. */}
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brick">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#F3EDE2" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-8 w-8" aria-hidden>
+              <path className="check-path" d="M4.5 12.5l5 5 10-11" />
+            </svg>
+          </div>
+          <h2 className="mt-6 font-display text-fluid-xl text-ink">
+            Thanks, {first} — order in.
           </h2>
-          <p className="mt-4 text-ink-muted">
-            Your order is heading to the bar for {pickup.toLowerCase()}. Keep an
-            eye on your phone for the ready text.
+          <p className="mt-3 text-lg text-ink">
+            Ready around{' '}
+            <span className="font-medium tabular-nums">
+              {placedOrder?.readyLabel ?? pickupClock(pickup)}
+            </span>
           </p>
+          <p className="mt-2 text-ink-muted">
+            We&apos;ll call{' '}
+            <span className="font-medium text-ink">{placedOrder?.name ?? name}</span>{' '}
+            at the counter — no ticket needed.
+          </p>
+
+          {placedOrder && (
+            <div className="mx-auto mt-8 max-w-sm text-left">
+              <ReceiptSummary
+                lines={placedOrder.lines.map((l) => ({
+                  key: l.key,
+                  label: l.name,
+                  detail:
+                    l.modifiers.length > 0
+                      ? l.modifiers.map((m) => m.value).join(' · ')
+                      : undefined,
+                  qty: l.qty,
+                  amountCents: l.priceCents * l.qty,
+                }))}
+                extras={[
+                  ...(placedOrder.tipCents > 0
+                    ? [{ label: 'Tip', value: formatCents(placedOrder.tipCents) }]
+                    : []),
+                  ...(placedOrder.totalCents >
+                  placedOrder.lines.reduce((s, l) => s + l.priceCents * l.qty, 0) +
+                    placedOrder.tipCents
+                    ? [
+                        {
+                          label: 'Tax',
+                          value: formatCents(
+                            placedOrder.totalCents -
+                              placedOrder.lines.reduce(
+                                (s, l) => s + l.priceCents * l.qty,
+                                0,
+                              ) -
+                              placedOrder.tipCents,
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
+                totalCents={placedOrder.totalCents}
+                note="Charged — this is the final amount."
+              />
+            </div>
+          )}
+
+          <p className="mt-6 text-sm text-ink-muted">
+            {site.address.street} · {openStatus?.label ?? site.hoursSummary}
+          </p>
+          {site.phone && (
+            <p className="mt-1 text-sm text-ink-muted">
+              Something wrong?{' '}
+              <a
+                href={`tel:${site.phone.replace(/[^\d+]/g, '')}`}
+                className="underline underline-offset-2 transition-colors hover:text-ink"
+              >
+                Call us at {site.phone}
+              </a>
+            </p>
+          )}
           <button
             type="button"
-            onClick={() => {
-              setStatus('idle');
-              setName('');
-            }}
+            onClick={() => setStatus('idle')}
             className="mt-8 inline-flex items-center gap-2 rounded-full bg-brick px-7 py-3.5 text-sm font-medium text-cream transition-colors hover:bg-[#9b4128]"
           >
             Start another order
@@ -765,6 +1069,26 @@ export default function OrderExperience() {
 
   return (
     <section className="bg-cream py-12 md:py-20">
+      {/* The bag↔payment change is a horizontal push INSIDE the persistent
+          sheet (never a second sheet, never a route change). Standard easing,
+          sheet frame and scrim stay put; reduced motion gets a plain fade. */}
+      <style>{`
+        @keyframes steppushin {
+          from { transform: translateX(9%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes steppushback {
+          from { transform: translateX(-9%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        .step-push-in { animation: steppushin 0.28s cubic-bezier(0.2, 0, 0, 1) both; }
+        .step-push-back { animation: steppushback 0.28s cubic-bezier(0.2, 0, 0, 1) both; }
+        @media (prefers-reduced-motion: reduce) {
+          .step-push-in, .step-push-back {
+            animation: none;
+          }
+        }
+      `}</style>
       <div className="mx-auto grid max-w-edge gap-x-14 gap-y-10 px-5 sm:px-8 lg:grid-cols-12">
         {/* Closed: say so up front, before anyone builds a cart they can't pay
             for. The menu and cart stay usable on purpose — the cart persists,
@@ -866,6 +1190,33 @@ export default function OrderExperience() {
             list scrolls INSIDE the panel, so the checkout button never leaves
             the viewport. Both share the ONE cart body below (single Square card
             container, no duplicate ids). */}
+        {/* One-tap reorder — Amazon's 1-Click applied to the dominant coffee
+            case, "same as last time". Occupies the floating pill's spot only
+            while the bag is empty; the moment anything is added the ordinary
+            View-order pill takes over. */}
+        {itemCount === 0 && !cartOpen && lastOrder && status === 'idle' && (
+          <button
+            type="button"
+            onClick={() => {
+              if (!lastOrder) return;
+              dispatch({ type: 'hydrate', lines: lastOrder.lines });
+              setTip(lastOrder.tip);
+              if (PICKUP_OPTIONS.includes(lastOrder.pickup)) setPickup(lastOrder.pickup);
+              setCartOpen(true);
+            }}
+            aria-haspopup="dialog"
+            className="fixed inset-x-3 bottom-[calc(var(--tabbar-h)+0.75rem+env(safe-area-inset-bottom))] z-40 flex items-center justify-between gap-3 rounded-full border border-cream/25 bg-ink px-5 py-3.5 text-cream shadow-lg shadow-black/30 transition-transform active:scale-[0.99] motion-reduce:active:scale-100 lg:hidden"
+          >
+            <span className="min-w-0 truncate text-sm font-medium">
+              Your usual ·{' '}
+              {lastOrder.lines
+                .map((l) => (l.qty > 1 ? `${l.qty}× ${l.name}` : l.name))
+                .join(', ')}
+            </span>
+            <span className="shrink-0 text-sm font-semibold tabular-nums">Reorder</span>
+          </button>
+        )}
+
         {itemCount > 0 && !cartOpen && (
           <button
             type="button"
@@ -988,9 +1339,30 @@ export default function OrderExperience() {
           </div>
 
           {state.lines.length === 0 ? (
-            <p className="flex-1 px-6 py-12 text-center text-ink-muted">
-              Your cart is empty. Add something tasty from the menu.
-            </p>
+            <div className="flex-1 px-6 py-12">
+              {/* Undo must survive removing the LAST item — that is the removal
+                  most worth taking back, and it lands on this branch. */}
+              {removedLine && (
+                <div className="mb-6 flex items-center justify-between gap-3 rounded-lg bg-ink/[0.06] px-3 py-2.5 text-sm animate-fade-up motion-reduce:animate-none">
+                  <span className="min-w-0 truncate text-ink-muted">
+                    Removed {removedLine.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dispatch({ type: 'restore', line: removedLine });
+                      setRemovedLine(null);
+                    }}
+                    className="shrink-0 font-medium text-brick underline underline-offset-2"
+                  >
+                    Undo
+                  </button>
+                </div>
+              )}
+              <p className="text-center text-ink-muted">
+                Your cart is empty. Add something tasty from the menu.
+              </p>
+            </div>
           ) : (
             <>
               {/* Scrollable middle. Keyed on the step so entering payment
@@ -1002,7 +1374,7 @@ export default function OrderExperience() {
                 className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-4"
               >
                 {payStep ? (
-                  <div className="animate-fade-up pt-4 motion-reduce:animate-none">
+                  <div className="step-push-in pt-4">
                     {/* The bill, collapsed to a glance; the receipt card is
                         the payment screen's one flourish. */}
                     <ReceiptSummary
@@ -1022,18 +1394,31 @@ export default function OrderExperience() {
                         qty: l.qty,
                         amountCents: l.priceCents * l.qty,
                       }))}
-                      extras={
-                        tipCents > 0
-                          ? [{ label: `Tip (${tipPercent}%)`, value: formatCents(tipCents) }]
-                          : []
-                      }
+                      extras={[
+                        ...(tipCents > 0
+                          ? [
+                              {
+                                label: `Tip${tip.mode === 'pct' ? ` (${tip.pct}%)` : ''}`,
+                                value: formatCents(tipCents),
+                              },
+                            ]
+                          : []),
+                        ...(taxCents !== null && taxCents > 0
+                          ? [{ label: 'Tax', value: formatCents(taxCents) }]
+                          : []),
+                      ]}
                       totalCents={dueCents}
-                      note="Sales tax is added when the card is charged."
+                      note={
+                        taxCents === null
+                          ? 'Sales tax is added when the card is charged.'
+                          : undefined
+                      }
                     />
 
                     <div className="mt-3 flex items-center justify-between gap-3 text-sm">
                       <p className="min-w-0 truncate text-ink-muted">
-                        Pickup · {pickup.toLowerCase()}
+                        Pickup for {name.trim() || walletName.current || 'you'} ·{' '}
+                        {mounted ? `~${pickupClock(pickup)}` : pickup.toLowerCase()}
                       </p>
                       <button
                         type="button"
@@ -1080,6 +1465,11 @@ export default function OrderExperience() {
                         locationId={SQ_LOCATION_ID as string}
                         env={SQ_ENV}
                         amountCents={dueCents}
+                        breakdown={{
+                          subtotalCents: subtotal,
+                          tipCents,
+                          taxCents: taxCents ?? 0,
+                        }}
                         onPaid={onPaid}
                         onError={onPayError}
                         onWalletStart={onWalletStart}
@@ -1111,10 +1501,10 @@ export default function OrderExperience() {
                           />
                           <span className="text-xs leading-snug text-ink-muted">
                             {savedCard
-                              ? 'Remember this card instead for faster checkout. '
-                              : 'Save this card on this device for faster checkout. '}
-                            It stays with Square, never on this site, and anyone
-                            using this device could order with it.
+                              ? 'Remember this card instead for one-tap next time. '
+                              : 'Remember this card on this phone for one-tap next time. '}
+                            It stays with Square, never on this site — and anyone
+                            using this phone could order with it.
                           </span>
                         </label>
                       )}
@@ -1133,7 +1523,7 @@ export default function OrderExperience() {
                     </button>
                   </div>
                 ) : (
-                  <>
+                  <div className={returningToBag ? 'step-push-back' : undefined}>
                 <ul className="flex flex-col divide-y divide-ink/10">
                   {state.lines.map((line) => (
                     <li key={line.key} className="flex gap-3 py-4">
@@ -1162,7 +1552,13 @@ export default function OrderExperience() {
                                 ? `Remove ${line.name}`
                                 : `Remove one ${line.name}`
                             }
-                            onClick={() => dispatch({ type: 'dec', key: line.key })}
+                            onClick={() => {
+                              // Carts double as holding pens — a fat-fingered
+                              // removal must be recoverable without rebuilding
+                              // the drink from the menu.
+                              if (line.qty === 1) setRemovedLine(line);
+                              dispatch({ type: 'dec', key: line.key });
+                            }}
                             className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-ink transition-colors hover:bg-ink/10 lg:h-8 lg:w-8"
                           >
                             {/* At one, "−" already deletes the line — say so
@@ -1200,7 +1596,10 @@ export default function OrderExperience() {
                         <button
                           type="button"
                           aria-label={`Remove ${line.name}`}
-                          onClick={() => dispatch({ type: 'remove', key: line.key })}
+                          onClick={() => {
+                            setRemovedLine(line);
+                            dispatch({ type: 'remove', key: line.key });
+                          }}
                           // Desktop only: on a phone the stepper's bin does
                           // this job, and a second remove control left a
                           // stray X floating in the price column.
@@ -1213,25 +1612,155 @@ export default function OrderExperience() {
                   ))}
                 </ul>
 
-                {/* Tip */}
+                {/* Five seconds of grace after a removal. */}
+                {removedLine && (
+                  <div className="mt-1 flex items-center justify-between gap-3 rounded-lg bg-ink/[0.06] px-3 py-2.5 text-sm animate-fade-up motion-reduce:animate-none">
+                    <span className="min-w-0 truncate text-ink-muted">
+                      Removed {removedLine.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        dispatch({ type: 'restore', line: removedLine });
+                        setRemovedLine(null);
+                      }}
+                      className="shrink-0 font-medium text-brick underline underline-offset-2"
+                    >
+                      Undo
+                    </button>
+                  </div>
+                )}
+
+                {/* Tip — Square's Smart Tips split: dollar chips under $10
+                    (18% of a latte is unjudgeable; $1 is not), percentages
+                    with their computed dollars above. None is first, equal
+                    weight, and nothing is ever preselected. */}
                 <div className="mt-1 border-t border-ink/10 pt-5">
                   <p className="text-sm font-medium text-ink">Add a tip</p>
-                  <div className="mt-2 flex gap-2">
-                    {TIP_OPTIONS.map((pct) => (
-                      <button
-                        key={pct}
-                        type="button"
-                        onClick={() => setTipPercent(pct)}
-                        className={`min-h-[44px] flex-1 rounded-full border px-2 py-2 text-sm tabular-nums transition-colors lg:min-h-0 ${
-                          tipPercent === pct
-                            ? 'border-brick bg-brick text-cream'
-                            : 'border-ink/15 text-ink hover:border-ink/40'
-                        }`}
-                      >
-                        {pct === 0 ? 'None' : `${pct}%`}
-                      </button>
-                    ))}
+                  <div className="mt-2 flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTip({ mode: 'none' });
+                        setCustomTipOpen(false);
+                        rememberTip({ mode: 'none' });
+                      }}
+                      className={`min-h-[44px] flex-1 rounded-full border px-1 text-sm transition-colors lg:min-h-0 lg:py-2 ${
+                        tip.mode === 'none' && !customTipOpen
+                          ? 'border-brick bg-brick text-cream'
+                          : 'border-ink/15 text-ink hover:border-ink/40'
+                      }`}
+                    >
+                      None
+                    </button>
+                    {subtotal < SMART_TIP_THRESHOLD
+                      ? TIP_FLATS.map((cents) => {
+                          const active =
+                            !customTipOpen && tip.mode === 'cents' && tip.cents === cents;
+                          return (
+                            <button
+                              key={cents}
+                              type="button"
+                              onClick={() => {
+                                setTip({ mode: 'cents', cents });
+                                setCustomTipOpen(false);
+                                rememberTip({ mode: 'cents', cents });
+                              }}
+                              className={`min-h-[44px] flex-1 rounded-full border px-1 text-sm tabular-nums transition-colors lg:min-h-0 lg:py-2 ${
+                                active
+                                  ? 'border-brick bg-brick text-cream'
+                                  : 'border-ink/15 text-ink hover:border-ink/40'
+                              }`}
+                            >
+                              ${cents / 100}
+                            </button>
+                          );
+                        })
+                      : TIP_PCTS.map((pct) => {
+                          const active = !customTipOpen && tip.mode === 'pct' && tip.pct === pct;
+                          return (
+                            <button
+                              key={pct}
+                              type="button"
+                              onClick={() => {
+                                setTip({ mode: 'pct', pct });
+                                setCustomTipOpen(false);
+                                rememberTip({ mode: 'pct', pct });
+                              }}
+                              className={`flex min-h-[44px] flex-1 flex-col items-center justify-center rounded-full border px-1 leading-tight transition-colors lg:min-h-0 lg:py-1.5 ${
+                                active
+                                  ? 'border-brick bg-brick text-cream'
+                                  : 'border-ink/15 text-ink hover:border-ink/40'
+                              }`}
+                            >
+                              <span className="text-sm">{pct}%</span>
+                              <span
+                                className={`text-[10px] tabular-nums ${
+                                  active ? 'text-cream/80' : 'text-ink-muted'
+                                }`}
+                              >
+                                {formatCents(Math.round((subtotal * pct) / 100))}
+                              </span>
+                            </button>
+                          );
+                        })}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomTipOpen(true);
+                        setCustomTipText(
+                          tip.mode === 'cents' && !TIP_FLATS.includes(tip.cents)
+                            ? (tip.cents / 100).toFixed(2)
+                            : '',
+                        );
+                      }}
+                      className={`min-h-[44px] flex-1 rounded-full border px-1 text-sm transition-colors lg:min-h-0 lg:py-2 ${
+                        customTipOpen ||
+                        (tip.mode === 'cents' && !TIP_FLATS.includes(tip.cents))
+                          ? 'border-brick bg-brick text-cream'
+                          : 'border-ink/15 text-ink hover:border-ink/40'
+                      }`}
+                    >
+                      Other
+                    </button>
                   </div>
+                  {customTipOpen && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-sm text-ink-muted">$</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={customTipText}
+                        onChange={(e) =>
+                          setCustomTipText(e.target.value.replace(/[^\d.]/g, ''))
+                        }
+                        onBlur={() => {
+                          const cents = Math.round(parseFloat(customTipText || '0') * 100);
+                          // Cap at half the subtotal — past that it's almost
+                          // certainly a typo ($30 tip on a $6 latte).
+                          const capped = Math.min(
+                            Math.max(0, Number.isFinite(cents) ? cents : 0),
+                            Math.round(subtotal / 2),
+                          );
+                          if (capped > 0) {
+                            setTip({ mode: 'cents', cents: capped });
+                            rememberTip({ mode: 'cents', cents: capped });
+                            setCustomTipText((capped / 100).toFixed(2));
+                          } else {
+                            setTip({ mode: 'none' });
+                            setCustomTipOpen(false);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+                        }}
+                        enterKeyHint="done"
+                        placeholder="1.50"
+                        aria-label="Custom tip amount in dollars"
+                        className="w-24 rounded-lg border border-ink/15 bg-cream px-3 py-2 text-sm tabular-nums text-ink outline-none transition-colors focus:border-brick"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Name + pickup */}
@@ -1245,30 +1774,64 @@ export default function OrderExperience() {
                       onKeyDown={onFieldEnter}
                       placeholder="First name"
                       autoComplete="given-name"
+                      autoCapitalize="words"
+                      autoCorrect="off"
+                      spellCheck={false}
                       // The only text field here, so Done means done: close the
                       // keyboard rather than jumping focus into the pickup
-                      // select, which would pop a picker straight back open.
+                      // pills below.
                       enterKeyHint="done"
                       className="mt-1.5 w-full rounded-lg border border-ink/15 bg-cream px-3 py-3 text-ink outline-none transition-colors placeholder:text-ink-muted/70 focus:border-brick lg:py-2.5"
                     />
                   </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-ink">Pickup</span>
-                    <select
-                      value={pickup}
-                      onChange={(e) => setPickup(e.target.value)}
-                      className="mt-1.5 w-full rounded-lg border border-ink/15 bg-cream px-3 py-3 text-ink outline-none transition-colors focus:border-brick lg:py-2.5"
-                    >
-                      {PICKUP_OPTIONS.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  {/* Pickup as clock times, not durations — nobody should do
+                      arithmetic to learn when their coffee is ready. Labels
+                      resolve after mount so the prerendered HTML (built at a
+                      different hour) never mismatches hydration. */}
+                  <div>
+                    <p className="text-sm font-medium text-ink">Pickup</p>
+                    <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                      {PICKUP_OPTIONS.map((opt) => {
+                        const active = pickup === opt;
+                        const asap = opt === 'As soon as possible';
+                        return (
+                          <button
+                            key={opt}
+                            type="button"
+                            onClick={() => {
+                              setPickup(opt);
+                              rememberPickup(opt);
+                            }}
+                            className={`flex min-h-[44px] flex-col items-center justify-center rounded-xl border px-2 py-1.5 leading-tight transition-colors ${
+                              active
+                                ? 'border-brick bg-brick text-cream'
+                                : 'border-ink/15 text-ink hover:border-ink/40'
+                            }`}
+                          >
+                            <span className="text-sm tabular-nums">
+                              {asap ? 'ASAP' : mounted ? pickupClock(opt) : opt}
+                            </span>
+                            <span
+                              className={`text-[11px] tabular-nums ${
+                                active ? 'text-cream/80' : 'text-ink-muted'
+                              }`}
+                            >
+                              {asap
+                                ? mounted
+                                  ? `ready ~${pickupClock(opt)}`
+                                  : 'fastest'
+                                : opt.replace('In ', 'in ')}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
-                {/* Totals */}
+                {/* Totals. With a live quote the figure here IS the charge —
+                    the number on this screen, the receipt, the Pay button and
+                    the Face ID sheet are all the same one. */}
                 <dl className="mt-5 flex flex-col gap-1.5 border-t border-ink/10 pt-4 text-sm">
                   <div className="flex justify-between text-ink-muted">
                     <dt>Subtotal</dt>
@@ -1276,19 +1839,27 @@ export default function OrderExperience() {
                   </div>
                   {tipCents > 0 && (
                     <div className="flex justify-between text-ink-muted">
-                      <dt>Tip ({tipPercent}%)</dt>
+                      <dt>Tip{tip.mode === 'pct' ? ` (${tip.pct}%)` : ''}</dt>
                       <dd className="tabular-nums">{formatCents(tipCents)}</dd>
+                    </div>
+                  )}
+                  {taxCents !== null && taxCents > 0 && (
+                    <div className="flex justify-between text-ink-muted">
+                      <dt>Tax</dt>
+                      <dd className="tabular-nums">{formatCents(taxCents)}</dd>
                     </div>
                   )}
                   <div className="mt-1 flex justify-between border-t border-ink/10 pt-2 font-medium text-ink">
                     <dt>Due at checkout</dt>
                     <dd className="tabular-nums">{formatCents(dueCents)}</dd>
                   </div>
-                  <p className="mt-1 text-xs text-ink-muted">
-                    Sales tax is added on the payment step.
-                  </p>
+                  {taxCents === null && (
+                    <p className="mt-1 text-xs text-ink-muted">
+                      Sales tax is added when the card is charged.
+                    </p>
+                  )}
                 </dl>
-                  </>
+                  </div>
                 )}
               </div>
 
@@ -1388,6 +1959,19 @@ export default function OrderExperience() {
                     <ArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   </button>
                 )}
+                {/* What's accepted, said before committing — a wallet user
+                    learns payment is one tap away without finding out on the
+                    next screen. */}
+                {SQUARE_READY &&
+                  !closed &&
+                  status !== 'closed' &&
+                  status !== 'not_configured' &&
+                  status !== 'price_changed' &&
+                  status !== 'unconfirmed' && (
+                    <p className="mt-2 text-center text-[11px] text-ink-muted">
+                      Apple Pay · Google Pay · Cash App Pay · card
+                    </p>
+                  )}
                 {!name.trim() &&
                   !closed &&
                   status !== 'closed' &&

@@ -281,10 +281,16 @@ export default function ItemSheet({
             className="flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-full bg-brick px-6 text-[0.9375rem] font-medium tracking-wide text-cream transition-transform duration-200 ease-drawer active:scale-[0.985] motion-reduce:active:scale-100"
           >
             <span>Add to order</span>
-            <span aria-hidden className="text-cream/50">
-              ·
-            </span>
-            <span className="tabular-nums">{formatCents(unit * qty)}</span>
+            {/* No price until an item is actually open — the exported HTML
+                otherwise ships a literal "$0.00" in this button. */}
+            {unit > 0 && (
+              <>
+                <span aria-hidden className="text-cream/50">
+                  ·
+                </span>
+                <span className="tabular-nums">{formatCents(unit * qty)}</span>
+              </>
+            )}
           </button>
         </div>
       </div>

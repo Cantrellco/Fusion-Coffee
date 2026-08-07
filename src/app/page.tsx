@@ -20,6 +20,12 @@ const mapEmbed = `https://www.google.com/maps?q=${encodeURIComponent(
 export default function HomePage() {
   return (
     <>
+      {/* The hero image is this page's LCP; with output:'export' + unoptimized
+          images nothing else prioritizes it, so hint it explicitly. React
+          hoists this <link> into <head>. Lives here, not the root layout, so
+          the other six pages stop force-downloading a 400KB image they never
+          render. */}
+      <link rel="preload" as="image" href={photos.hero} fetchPriority="high" />
       {/* ============================ HERO ============================ */}
       <section className="relative flex min-h-[100svh] items-end overflow-hidden bg-espresso">
         {/* eslint-disable-next-line @next/next/no-img-element */}

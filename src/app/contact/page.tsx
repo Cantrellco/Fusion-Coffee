@@ -5,13 +5,20 @@ import VisitBlock from '@/components/VisitBlock';
 import Button from '@/components/Button';
 import { Mail, Phone, Instagram, Facebook, ArrowUpRight } from '@/components/icons';
 import { CornerBotanical, Sprig } from '@/components/Botanical';
-import { site, photos } from '@/lib/site';
+import { site, photos, ogBase } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Contact',
   description:
     'Visit Fusion Coffee at 207 East Main Street, Fairfield, IL. Hours, directions, and how to reach us by email, Instagram and Facebook.',
   alternates: { canonical: '/contact/' },
+  openGraph: {
+    ...ogBase,
+    url: '/contact/',
+    title: 'Contact · Fusion Coffee',
+    description:
+      'Visit Fusion Coffee at 207 East Main Street, Fairfield, IL. Hours, directions, and how to reach us by email, Instagram and Facebook.',
+  },
 };
 
 // Pre-filled email subjects for the inquiries the page invites — so a tap opens

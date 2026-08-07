@@ -4,13 +4,20 @@ import { CornerBotanical, Sprig } from '@/components/Botanical';
 import Reveal from '@/components/Reveal';
 import Button from '@/components/Button';
 import ShopExperience from '@/components/merch/ShopExperience';
-import { site, merch } from '@/lib/site';
+import { site, merch, ogBase } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Shop',
   description:
-    'Take Fusion Coffee home — branded hoodies, crews and tees, stickers and totes, whole-bean coffee and loose-leaf tea. Buy online for delivery, or pick up on Main Street.',
+    'Take Fusion Coffee home — branded hoodies, crews and tees, stickers and totes, whole-bean coffee and loose-leaf tea. Buy online or pick up on Main Street.',
   alternates: { canonical: '/merch/' },
+  openGraph: {
+    ...ogBase,
+    url: '/merch/',
+    title: 'Shop · Fusion Coffee',
+    description:
+      'Take Fusion Coffee home — branded hoodies, crews and tees, stickers and totes, whole-bean coffee and loose-leaf tea. Buy online or pick up on Main Street.',
+  },
 };
 
 // The grid, the bag and checkout all live in ShopExperience (a client

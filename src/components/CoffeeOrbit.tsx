@@ -207,7 +207,10 @@ export default function CoffeeOrbit({
           void pull();
         }
       },
-      { rootMargin: '150% 0px 150% 0px' },
+      // 50% = start pulling the clip about half a viewport before the section
+      // shows. 150% fired ~one viewport into the page, so nearly every visit
+      // paid the full 17.9MB/5MB download whether or not they ever got here.
+      { rootMargin: '50% 0px 50% 0px' },
     );
     io.observe(section);
 

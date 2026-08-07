@@ -1,10 +1,63 @@
 # Old Square Online URLs (175 indexed — docs/cutover/square-urls.txt).
-# These paths die at the domain flip; send them somewhere real.
 # Cloudflare Pages defaults to 302 — the explicit 301 matters for SEO.
+# First match wins: specific merch slugs sit above the /product/* default,
+# so drink/food links land on /order/ and retail links land on /merch/.
 /contact-us /contact/ 301
 /contact-us/ /contact/ 301
 /s/order /order/ 301
 /s/order/ /order/ 301
 /s/* /order/ 301
-/shop/* /merch/ 301
-/product/* /merch/ 301
+/about /about/ 301
+/merch /merch/ 301
+/shop/merchandise/* /merch/ 301
+/shop/items/* /merch/ 301
+/shop/* /order/ 301
+# — apparel, stickers, drinkware, gift —
+/product/fusion-staple-hoodie/* /merch/ 301
+/product/support-your-local-hoodie/* /merch/ 301
+/product/fusion-coffee-crewneck/* /merch/ 301
+/product/support-your-local-crewneck/* /merch/ 301
+/product/winter-drop-crewneck/* /merch/ 301
+/product/fusion-golden-bear-tee/* /merch/ 301
+/product/summer-t-shirt/* /merch/ 301
+/product/fusion-hat/* /merch/ 301
+/product/fusion-staple-sticker/* /merch/ 301
+/product/support-your-local-sticker/* /merch/ 301
+/product/sticker/* /merch/ 301
+/product/tote-bag/* /merch/ 301
+/product/glass/* /merch/ 301
+/product/gift-card/* /merch/ 301
+# — whole-bean coffee, tea tins, gift boxes —
+/product/black-and-white-esteban-zamora/* /merch/ 301
+/product/black-and-white-galatia/* /merch/ 301
+/product/black-and-white-the-holiday-blend/* /merch/ 301
+/product/black-and-white-the-natural/* /merch/ 301
+/product/black-and-white-the-original-/* /merch/ 301
+/product/columbia-chami/* /merch/ 301
+/product/decaf-columbia/* /merch/ 301
+/product/desire-your-wellness-tea/* /merch/ 301
+/product/honduras-jose-martinez/* /merch/ 301
+/product/little-wolf-companion-blend/* /merch/ 301
+/product/little-wolf-decaf/* /merch/ 301
+/product/methodical-feels-like-summer/* /merch/ 301
+/product/onyx-southern-weather/* /merch/ 301
+/product/onyx-tropical-weather/* /merch/ 301
+/product/organic-blend-333-box/* /merch/ 301
+/product/organic-earl-grey-box/* /merch/ 301
+/product/organic-jasmine-peach/* /merch/ 301
+/product/phono-blend/* /merch/ 301
+/product/rocky-s-matcha-tin/* /merch/ 301
+/product/september-coffee-buttercream-/* /merch/ 301
+/product/september-coffee-dance-chelbesa/* /merch/ 301
+/product/september-coffee-franco-castillo-/* /merch/ 301
+/product/stereo-blend/* /merch/ 301
+/product/stereo-blend-mobile-/* /merch/ 301
+/product/sweet-bloom/* /merch/ 301
+/product/sweet-bloom-decaf/* /merch/ 301
+/product/valor-hayride/* /merch/ 301
+/product/valor-red-box/* /merch/ 301
+/product/volley-coffee/* /merch/ 301
+/product/christmas-box/* /merch/ 301
+/product/peppermint-bark-box/* /merch/ 301
+# — everything else was a drink or a bite —
+/product/* /order/ 301

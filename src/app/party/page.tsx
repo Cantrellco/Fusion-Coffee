@@ -5,13 +5,20 @@ import Button from '@/components/Button';
 import BookingForm from '@/components/BookingForm';
 import { Clock, Bean, Mail, Phone, ArrowUpRight } from '@/components/icons';
 import { CornerBotanical, Sprig } from '@/components/Botanical';
-import { site, partyBooking, photos } from '@/lib/site';
+import { site, partyBooking, photos, ogBase } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Parties',
   description:
-    'Book Fusion Coffee for a private party in downtown Fairfield, Illinois. Saturday and Sunday booking windows, with specialty drinks and bites made to order for your group.',
+    'Book Fusion Coffee for a private party in downtown Fairfield, IL. Saturday and Sunday booking windows, with drinks and bites made to order for your group.',
   alternates: { canonical: '/party/' },
+  openGraph: {
+    ...ogBase,
+    url: '/party/',
+    title: 'Parties · Fusion Coffee',
+    description:
+      'Book Fusion Coffee for a private party in downtown Fairfield, IL. Saturday and Sunday booking windows, with drinks and bites made to order for your group.',
+  },
 };
 
 // Group the flat slot list by day so the two Sunday windows sit together under
