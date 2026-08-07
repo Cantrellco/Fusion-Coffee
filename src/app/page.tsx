@@ -27,7 +27,13 @@ export default function HomePage() {
           render. */}
       <link rel="preload" as="image" href={photos.hero} fetchPriority="high" />
       {/* ============================ HERO ============================ */}
-      <section className="relative flex min-h-[100svh] items-end overflow-hidden bg-espresso">
+      {/* min-h adds the top safe-area inset because in a home-screen install
+          iOS resolves 100svh short by the status-bar height while the layout
+          still starts at the physical screen top — without the inset the hero
+          ends ~the status bar's height above the fold and the next section's
+          cream peeks in behind the tab bar. env() is 0 in a browser tab and
+          on desktop, so this is byte-identical everywhere else. */}
+      <section className="relative flex min-h-[calc(100svh+env(safe-area-inset-top))] items-end overflow-hidden bg-espresso">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={photos.hero}
