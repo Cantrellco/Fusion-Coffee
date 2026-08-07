@@ -1,0 +1,10 @@
+# Old Square Online URLs (175 indexed — docs/cutover/square-urls.txt).
+# These paths die at the domain flip; send them somewhere real.
+# Cloudflare Pages defaults to 302 — the explicit 301 matters for SEO.
+/contact-us /contact/ 301
+/contact-us/ /contact/ 301
+/s/order /order/ 301
+/s/order/ /order/ 301
+/s/* /order/ 301
+/shop/* /merch/ 301
+/product/* /merch/ 301
