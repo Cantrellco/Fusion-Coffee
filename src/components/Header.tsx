@@ -197,7 +197,10 @@ export default function Header() {
         // Keyboard focus summons the tucked-away bar back: without this, a
         // hidden bar's logo + hamburger were invisible tab stops.
         onFocusCapture={() => setBarHidden(false)}
-        className={`mx-auto max-w-edge px-4 pt-3 transition-transform duration-500 ease-out-expo motion-reduce:transition-none sm:px-6 md:pt-4 ${
+        // Top inset mirrors MenuChips/OrderChips: 0.75rem in a browser tab
+        // (env() is 0 there), the status-bar height in a home-screen install —
+        // otherwise the standalone app draws the pill under the iOS clock.
+        className={`mx-auto max-w-edge px-4 pt-[max(0.75rem,env(safe-area-inset-top))] transition-transform duration-500 ease-out-expo motion-reduce:transition-none sm:px-6 md:pt-4 ${
           barHidden && !open
             ? '-translate-y-[130%] md:translate-y-0'
             : 'translate-y-0'

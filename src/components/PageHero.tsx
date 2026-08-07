@@ -14,7 +14,11 @@ export default function PageHero({
   ghost?: string;
 }) {
   return (
-    <section className="hero-wash grain-soft relative overflow-hidden bg-cream pt-24 md:pt-44">
+    // In a home-screen install the viewport starts under the iOS status bar
+    // (viewport-fit=cover), so the hero adds the safe-area inset on top of its
+    // browser padding — keeping the same clearance under the header pill,
+    // which grows by the same inset. env() is 0 in a normal tab; md: unchanged.
+    <section className="hero-wash grain-soft relative overflow-hidden bg-cream pt-[calc(6rem+env(safe-area-inset-top))] md:pt-44">
       {/* Oversized ghost letterform — the cream-surface echo of the footer's
           giant brand word. Purely decorative, sits behind z-10 content. */}
       <span
