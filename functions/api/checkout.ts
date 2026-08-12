@@ -87,10 +87,15 @@
 //      Printful-variant map) — that removes the dependency on Square Online
 //      entirely and also gives real shipping quotes instead of the flat rate.
 //
-// To give the existing integration the best chance, merch line items are sent
-// as a bare catalog_object_id + quantity — no name, no price, no note — so they
-// match the variants Printful synced into the Square catalog exactly. The split
-// summary rides on the order's metadata and the shipment note instead.
+// To give the existing integration the best chance, merch line items name no
+// product detail of their own — no name, no price, no note — just the
+// catalog_object_id + quantity, so they match the variants Printful synced into
+// the Square catalog exactly. The split summary rides on the order's metadata
+// and the shipment note instead.
+//
+// (They also carry `applied_taxes`, which is a pointer to the order's own tax
+// and says nothing about WHICH product the line is. It cannot affect variant
+// matching. See src/lib/tax.ts for why the tax has to be declared per line.)
 //
 // CLOSED-SHOP GATE: café orders are rejected outside opening hours with HTTP
 // 409 { error: 'closed' }. The /order page hides checkout when closed too, but
@@ -118,6 +123,7 @@ import {
   type FulfilledBy,
   type ShippingAddress,
 } from '../../src/lib/shop';
+import { salesTax, taxableLine } from '../../src/lib/tax';
 import {
   SAVED_CARD_MAX_CENTS,
   resolveSavedCard,
@@ -225,13 +231,22 @@ const cafeItems = new Map(
 // Derived from the merch data, NOT from the request: the browser sends a
 // product id and nothing else that matters here. Today only the five apparel
 // pieces are Printful; everything else is the shop's own stock.
-const merchItems = new Map<string, { shipsFrom: FulfilledBy; pickupOnly: boolean }>(
+const merchItems = new Map<
+  string,
+  { shipsFrom: FulfilledBy; pickupOnly: boolean; taxExempt: boolean }
+>(
   merch.groups.flatMap((g) =>
     g.items.map(
       (i) =>
         [
           productSlug(i.name),
-          { shipsFrom: i.shipsFrom ?? 'shop', pickupOnly: i.pickupOnly ?? false },
+          {
+            shipsFrom: i.shipsFrom ?? 'shop',
+            pickupOnly: i.pickupOnly ?? false,
+            // Only the gift card. Read from OUR data, never the request — a
+            // hand-rolled POST must not be able to mark a hoodie tax-free.
+            taxExempt: i.taxExempt ?? false,
+          },
         ] as const,
     ),
   ),
@@ -441,10 +456,13 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
       return json({ error: 'price_changed', lines: mismatched }, 409);
     }
 
-    // Square owns the price: we pass the variation id, not a number.
+    // Square owns the price: we pass the variation id, not a number. Tax is
+    // declared per line so the gift card can sit in the same bag as a hoodie
+    // and only the hoodie is taxed.
     lineItems = body.lines.map((l) => ({
       catalog_object_id: l.variationId,
       quantity: String(l.qty),
+      ...taxableLine(!(merchItems.get(l.itemId)?.taxExempt ?? false)),
     }));
   } else {
     const mismatched: { itemId: string; shownCents: number; actualCents: number | null }[] = [];
@@ -485,6 +503,7 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
           catalog_object_id: l.squareCatalogObjectId,
           quantity: String(l.qty),
           ...(note ? { note } : {}),
+          ...taxableLine(true),
         };
       }
       return {
@@ -493,6 +512,9 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
         // Server-recomputed, not the browser's number.
         base_price_money: { amount: l.priceCents, currency: 'USD' },
         ...(note ? { note } : {}),
+        // Everything the café sells is taxable — drinks and food alike, exactly
+        // as the register rings them up. Nothing on this menu is exempt.
+        ...taxableLine(true),
       };
     });
   }
@@ -544,6 +566,14 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
     if (dueBeforeTax > SAVED_CARD_MAX_CENTS) {
       // A remembered card has no login behind it. Cap what one can spend so a
       // lost phone is worth a round of coffee, not an afternoon.
+      //
+      // Deliberately measured BEFORE tax, so the ceiling is a stable number the
+      // copy can quote ("up to $100") rather than one that moves with the rate.
+      // The charge can therefore exceed the cap by the tax on it — $100 of
+      // coffee bills $108. That is a rounding error against what this limit
+      // exists to prevent, and checking after tax would mean creating the order
+      // first and abandoning it, leaving the bar making a drink nobody can pay
+      // for.
       return json({ error: 'saved_card_limit', maxCents: SAVED_CARD_MAX_CENTS }, 409);
     }
     savedCard = await resolveSavedCard(
@@ -622,6 +652,9 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
       line_items: lineItems,
       fulfillments: [fulfillmentBlock],
       ...(serviceCharges.length ? { service_charges: serviceCharges } : {}),
+      // The shop's own catalog tax, referenced by id. Every taxable line above
+      // points at it; the gift card does not. See src/lib/tax.ts.
+      ...salesTax(),
       // Marks these as coming from this site rather than the POS or the old
       // Square Online store, so they can be filtered in the dashboard.
       source: { name: 'fusioncoffeeshop.com' },

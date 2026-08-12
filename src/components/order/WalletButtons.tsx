@@ -183,7 +183,13 @@ export default function WalletButtons({
    * exact Subtotal / Tip / Tax the page's receipt shows — the strongest
    * trust signal available, and free.
    */
-  breakdown?: { subtotalCents: number; tipCents: number; taxCents: number };
+  breakdown?: {
+    subtotalCents: number;
+    tipCents: number;
+    taxCents: number;
+    /** Merch shipments. Omitted (or 0) on café orders, which are collected. */
+    shippingCents?: number;
+  };
   /** Ask the wallet for a delivery address. Merch shipments only. */
   requestShippingContact?: boolean;
   label?: string;
@@ -213,6 +219,7 @@ export default function WalletButtons({
   const bSub = breakdown?.subtotalCents ?? -1;
   const bTip = breakdown?.tipCents ?? -1;
   const bTax = breakdown?.taxCents ?? -1;
+  const bShip = breakdown?.shippingCents ?? 0;
   const [avail, setAvail] = useState({ apple: false, google: false, cashapp: false });
   // True once every wallet has had its turn to initialize.
   //
@@ -254,6 +261,7 @@ export default function WalletButtons({
             ? {
                 lineItems: [
                   { label: 'Subtotal', amount: money(bSub) },
+                  ...(bShip > 0 ? [{ label: 'Shipping', amount: money(bShip) }] : []),
                   ...(bTip > 0 ? [{ label: 'Tip', amount: money(bTip) }] : []),
                 ],
                 ...(bTax > 0
@@ -382,6 +390,7 @@ export default function WalletButtons({
     bSub,
     bTip,
     bTax,
+    bShip,
     referenceId,
     requestShippingContact,
     gpayId,

@@ -445,6 +445,16 @@ export type MerchItem = {
    */
   pickupOnly?: boolean;
   /**
+   * True when this product must NOT be charged sales tax. Only the gift card:
+   * selling one is not a taxable sale, it is loading a payment instrument, and
+   * the tax falls due when it is spent — which happens on the register, where
+   * it IS taxed. Charging 8% here as well would bill the same tax twice for one
+   * cup of coffee and over-remit to the state. Defaults to false.
+   *
+   * src/lib/tax.ts is what acts on this; see its header for the whole rule.
+   */
+  taxExempt?: boolean;
+  /**
    * Who ships it WHEN IT IS SHIPPED — 'printful' means print-on-demand, made
    * and posted by Printful straight to the customer. Defaults to 'shop'.
    *
@@ -646,6 +656,9 @@ export const merch: {
           image: '/images/merch/merch-gift-card.jpg',
           alt: 'Fusion Coffee gift card — charcoal logo panel beside a “a gift for you” card — propped on a saucer on the counter.',
           pickupOnly: true,
+          // Not a taxable sale — the 8% lands when the card is SPENT at the
+          // register. See MerchItem.taxExempt above.
+          taxExempt: true,
         },
       ],
     },

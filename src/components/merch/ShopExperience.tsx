@@ -152,6 +152,13 @@ export default function ShopExperience() {
   const [showErrors, setShowErrors] = useState(false);
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  // Exact tax from /api/quote (display-only — the server still charges Square's
+  // own total). null = quote unavailable, show the tax note instead.
+  const [quote, setQuote] = useState<{
+    subtotalCents: number;
+    taxCents: number;
+    fulfillment: Fulfillment;
+  } | null>(null);
   // One key per checkout attempt: reusing it across a retry makes the retry
   // idempotent at Square instead of a second charge.
   const idemKey = useRef<string>('');
@@ -266,8 +273,77 @@ export default function ShopExperience() {
     [state.lines, preferred],
   );
   const shipCents = shippingCents(fulfillment, subtotal);
-  const dueCents = subtotal + shipCents;
+  // The quote only counts while it describes THIS bag — a stale answer for a
+  // previous subtotal or a different fulfillment must not dress up the wrong
+  // total. null = no quote yet, so the page falls back to the tax note.
+  const taxCents =
+    quote && quote.subtotalCents === subtotal && quote.fulfillment === fulfillment
+      ? quote.taxCents
+      : null;
+  const dueCents = subtotal + shipCents + (taxCents ?? 0);
   const itemCount = state.lines.reduce((n, l) => n + l.qty, 0);
+
+  // Exact tax, quoted before the payment step, so the receipt, the Pay button
+  // and the Apple/Google sheet all show the number the card will actually be
+  // charged. Same endpoint and same reasoning as /order — a wallet sheet is
+  // REQUIRED to show the final amount, and a total that moves after the buyer
+  // commits is Baymard's most-cited abandonment cause.
+  //
+  // Display-only: /api/checkout still charges Square's own computed total. A
+  // failed quote is a shrug that reverts to the tax note, not an error state.
+  const quoteSeq = useRef(0);
+  useEffect(() => {
+    if (!SQUARE_READY || state.lines.length === 0) {
+      setQuote(null);
+      return;
+    }
+    const seq = ++quoteSeq.current;
+    const lines = state.lines.map((l) => ({
+      itemId: l.productId,
+      name: l.name,
+      qty: l.qty,
+      priceCents: l.priceCents,
+      variationId: l.variationId,
+    }));
+    const timer = window.setTimeout(() => {
+      void fetch('/api/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'shop', lines, fulfillment }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then(
+          (
+            data: {
+              subtotalCents?: number;
+              taxCents?: number;
+              fulfillment?: Fulfillment;
+            } | null,
+          ) => {
+            if (seq !== quoteSeq.current) return; // superseded by a newer bag
+            if (
+              data &&
+              typeof data.subtotalCents === 'number' &&
+              typeof data.taxCents === 'number'
+            ) {
+              setQuote({
+                subtotalCents: data.subtotalCents,
+                taxCents: data.taxCents,
+                // The server resolves this too (a gift card forces PICKUP), so
+                // trust ITS answer when matching the quote to the current bag.
+                fulfillment: data.fulfillment ?? fulfillment,
+              });
+            } else {
+              setQuote(null);
+            }
+          },
+        )
+        .catch(() => {
+          if (seq === quoteSeq.current) setQuote(null);
+        });
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [state.lines, fulfillment]);
   const problems = addressProblems(address, fulfillment);
   const canPay = itemCount > 0 && problems.length === 0;
 
@@ -646,11 +722,20 @@ export default function ShopExperience() {
                   qty: l.qty,
                   amountCents: l.priceCents * l.qty,
                 }))}
-                extras={
-                  fulfillment === 'SHIPMENT' ? [{ label: 'Shipping', value: 'Free' }] : []
-                }
+                extras={[
+                  ...(fulfillment === 'SHIPMENT'
+                    ? [{ label: 'Shipping', value: 'Free' }]
+                    : []),
+                  ...(taxCents !== null && taxCents > 0
+                    ? [{ label: 'Tax', value: formatCents(taxCents) }]
+                    : []),
+                ]}
                 totalCents={dueCents}
-                note="Sales tax is added when the card is charged."
+                note={
+                  taxCents === null
+                    ? 'Sales tax is added when the card is charged.'
+                    : undefined
+                }
               />
             </div>
 
@@ -688,6 +773,20 @@ export default function ShopExperience() {
                 onError={onPayError}
                 onWalletStart={onWalletStart}
                 referenceId="fusion-coffee-merch"
+                // Cost rows mirrored into the Face ID sheet. Only sent once the
+                // quote has landed: half a breakdown (subtotal, no tax) beside
+                // a tax-inclusive total would read as an error in the one place
+                // the customer is deciding whether to trust the charge.
+                breakdown={
+                  taxCents === null
+                    ? undefined
+                    : {
+                        subtotalCents: subtotal,
+                        tipCents: 0,
+                        taxCents,
+                        shippingCents: shipCents,
+                      }
+                }
                 dividerLabel="or pay with card"
               />
               <SquareCard
@@ -975,13 +1074,21 @@ export default function ShopExperience() {
                     <dd>Free</dd>
                   </div>
                 )}
+                {taxCents !== null && taxCents > 0 && (
+                  <div className="flex justify-between text-ink-muted">
+                    <dt>Tax</dt>
+                    <dd className="tabular-nums">{formatCents(taxCents)}</dd>
+                  </div>
+                )}
                 <div className="mt-1 flex justify-between border-t border-ink/10 pt-2 font-medium text-ink">
                   <dt>Due at checkout</dt>
                   <dd className="tabular-nums">{formatCents(dueCents)}</dd>
                 </div>
-                <p className="mt-1 text-xs text-ink-muted">
-                  Sales tax is added on the payment step.
-                </p>
+                {taxCents === null && (
+                  <p className="mt-1 text-xs text-ink-muted">
+                    Sales tax is added on the payment step.
+                  </p>
+                )}
               </dl>
             </div>
 
