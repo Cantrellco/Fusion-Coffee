@@ -27,6 +27,15 @@ import { useEffect, useRef, useState } from 'react';
    object-cover layer, that slid the entire frame — background and
    all — which read as the background drifting/creeping. Removed.)
 
+   The overlays (vignette, hairline, caption) are not animated here.
+   The scrub publishes its own eased playhead as `--orbit-p` (0 -> 1)
+   on the sticky panel — see paint() — and globals.css derives every
+   layer from that one number with calc(). That is deliberate: the
+   overlays must report where the FOOTAGE is, not where the finger is,
+   and reading easedT gets them EASE_TAU_MOBILE_MS for free. A second
+   clock (a spring, a scroll library) would disagree with the seek
+   chain and compete with it for exactly the frames it needs most.
+
    Smoothness, on phones especially, comes from four things — see
    the knobs and the scrub effect below for each:
      1. an eased playhead, so a flick glides instead of snapping;
@@ -234,7 +243,8 @@ export default function CoffeeOrbit({
   useEffect(() => {
     const section = sectionRef.current;
     const video = videoRef.current;
-    if (!section || !video) return;
+    const panel = stickyRef.current;
+    if (!section || !video || !panel) return;
 
     // Reduced motion: skip frame-seeking entirely — the poster (the clip's
     // first frame) stays up as a still. Pin the overlays to their readable
@@ -244,6 +254,11 @@ export default function CoffeeOrbit({
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setStarted(true); // started → cue fades out
       setNearEnd(true); // nearEnd → payoff link visible
+      // One line lands every --orbit-p-derived layer on its settled end state
+      // simultaneously: caption up and opaque, hairline drawn, vignette full.
+      // The poster gets a still-photograph treatment instead of a flat frame,
+      // and no per-layer reduced-motion gating is needed anywhere.
+      panel.style.setProperty('--orbit-p', '1');
       return;
     }
 
@@ -282,6 +297,25 @@ export default function CoffeeOrbit({
     // threshold never enters React's dispatch path at all.
     let startedNow = false;
     let nearEndNow = false;
+    // Raw scroll progress through the section, 0 → 1. Kept only so the
+    // dead-clip guard in tick() has something honest to publish; the scrub
+    // itself still works off targetT exactly as before.
+    let scrollP = 0;
+
+    // Publish the turn's progress for the overlay layers (globals.css derives
+    // the vignette, the hairline and the caption from it). Written on the
+    // sticky panel, never documentElement, so recalc stays inside this
+    // subtree — about eight elements. Rounded to 1/1000 and deduped, so a
+    // sub-perceptual delta doesn't invalidate style at all, and only ever
+    // called from inside the rAF loop — never from onScroll, where a style
+    // write would sit next to the getBoundingClientRect() read.
+    let paintedP = '';
+    const paint = (v: number) => {
+      const s = (v > 1 ? 1 : v > 0 ? v : 0).toFixed(3);
+      if (s === paintedP) return;
+      paintedP = s;
+      panel.style.setProperty('--orbit-p', s);
+    };
 
     const lastFrame = () => {
       const duration = video.duration;
@@ -364,6 +398,13 @@ export default function CoffeeOrbit({
       // is racy — that event can fire before this effect mounts (more likely
       // on heavier clips), which left the playhead stuck at 0.
       if (lastFrame() < 0) {
+        // No clip (still loading, or it never arrives — the documented
+        // Cloudflare Range failure). The overlays must not be held hostage by
+        // that: publish raw scroll progress so the caption and its /menu link
+        // still resolve on schedule over the poster. Without this line a failed
+        // fetch would pin --orbit-p at 0 and make the link permanently
+        // invisible, which is a regression on today's behaviour.
+        paint(scrollP);
         // Duration not ready — let the chain die HERE and rely on the
         // 'loadedmetadata' / 'durationchange' / 'canplay' listeners below to
         // re-arm it the moment metadata lands. Self-rescheduling instead was
@@ -388,6 +429,11 @@ export default function CoffeeOrbit({
       // keeps the loop alive forever for motion nobody can see.
       if (Math.abs(targetT - easedT) < halfFrame) easedT = targetT;
 
+      // The overlays follow the eased playhead, not the scroll: they resolve
+      // with the footage, so a flick carries them exactly as far as it carries
+      // the can. Duration is known to be valid here — lastFrame() guarded it.
+      paint(easedT / video.duration);
+
       pump();
 
       if (easedT !== targetT || pendingSeek) {
@@ -401,6 +447,7 @@ export default function CoffeeOrbit({
       const rect = section.getBoundingClientRect();
       const p = travel > 0 ? Math.min(Math.max(-rect.top, 0), travel) / travel : 0;
       targetT = p * (video.duration || 0);
+      scrollP = p; // read by tick()'s dead-clip guard only
 
       const s = p > 0.015;
       if (s !== startedNow) {
@@ -511,19 +558,27 @@ export default function CoffeeOrbit({
           />
         </video>
 
-        {/* "Scroll to spin" cue — fades out the moment the orbit begins.
+        {/* The light closing onto the can — a static radial whose OPACITY is
+            derived from --orbit-p (globals.css). Never scaled or moved: this is
+            the one layer over the footage, and a moving gradient over a
+            full-bleed frame is the drift percept the video's own transform was
+            removed for. */}
+        <div aria-hidden className="orbit-vignette pointer-events-none absolute inset-0" />
+
+        {/* "Scroll to spin" cue — a slow breath while it waits, then it lifts
+            away against the scroll the moment the turn it asked for takes over.
             <md it rides above the fixed tab bar (+ safe area); md: restores
             the original bottom-10. */}
         <div
           aria-hidden
-          className={`orbit-cue pointer-events-none absolute inset-x-0 bottom-[calc(2.5rem+var(--tabbar-h)+env(safe-area-inset-bottom))] flex flex-col items-center gap-2 text-cream/80 transition-opacity duration-500 ease-out-expo md:bottom-10 ${
-            started ? 'opacity-0' : 'opacity-100'
+          className={`orbit-cue pointer-events-none absolute inset-x-0 bottom-[calc(2.5rem+var(--tabbar-h)+env(safe-area-inset-bottom))] flex flex-col items-center gap-2 text-cream/80 transition-[opacity,transform] duration-500 ease-out-expo md:bottom-10 ${
+            started ? '-translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
           }`}
         >
           <span className="eyebrow text-cream/55">Scroll to spin</span>
           <svg
             viewBox="0 0 24 24"
-            className="h-5 w-5 animate-bounce motion-reduce:animate-none"
+            className="h-5 w-5 animate-orbit-breath motion-reduce:animate-none"
             fill="none"
             stroke="currentColor"
             strokeWidth={1.5}
@@ -534,17 +589,34 @@ export default function CoffeeOrbit({
           </svg>
         </div>
 
-        {/* Payoff caption — fades in as the turn completes, routing to merch.
-            <md the link clears the fixed tab bar (+ safe area) so it stays
-            tappable; md: restores the original pb-10. */}
+        {/* Payoff caption. Its opacity and 14px rise are MAPPED to --orbit-p in
+            globals.css, not toggled here — it resolves with the last degrees of
+            the turn and un-resolves frame for frame on the way back up, so it
+            reads as where the turn was going rather than as a threshold firing.
+            React state is left driving pointer-events alone (unchanged 0.88
+            threshold), and the old transition-opacity is deliberately gone: a
+            transition on a property recomputed every frame lags and smears it.
+            The rule stacks ABOVE the link, so the block grows upward off
+            bottom-0 — the link's own clearance over the tab bar is untouched.
+            <md that clearance is pb-[…]; md: restores the original pb-10. */}
         <div
-          className={`orbit-payoff absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-espresso/80 to-transparent pb-[calc(2.5rem+var(--tabbar-h)+env(safe-area-inset-bottom))] pt-20 transition-opacity duration-700 ease-out-expo md:pb-10 ${
-            nearEnd ? 'opacity-100' : 'pointer-events-none opacity-0'
+          className={`orbit-payoff absolute inset-x-0 bottom-0 flex flex-col items-center gap-5 bg-gradient-to-t from-espresso/85 via-espresso/40 to-transparent pb-[calc(2.5rem+var(--tabbar-h)+env(safe-area-inset-bottom))] pt-24 md:pb-10 ${
+            nearEnd ? '' : 'pointer-events-none'
           }`}
         >
+          {/* Draws outward from the centre just AHEAD of the caption's own
+              ramp, so the words set down onto a rule that is already there.
+              Full-strength oak, not a tint: this lands on whatever the footage
+              happens to be showing, and the last frames are pale wood — a
+              faint hairline simply vanished there. The scrim above carries a
+              via- stop for the same reason, so the rule has some ground. */}
+          <span
+            aria-hidden
+            className="orbit-rule h-px w-28 bg-gradient-to-r from-transparent via-oak to-transparent"
+          />
           <Link
             href="/menu/"
-            className="group inline-flex items-center gap-2 text-center font-display text-lg italic text-cream"
+            className="orbit-link group relative inline-flex items-center gap-2 text-center font-display text-lg italic text-cream"
           >
             Made to order — see the menu
             <span className="not-italic transition-transform duration-300 group-hover:translate-x-1">

@@ -78,6 +78,23 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        // Party calendar's month swap. The slide direction arrives as
+        // --slide-from so one keyframe covers paging both ways; the grid is
+        // keyed by month, so React remounts it and the animation replays.
+        'month-in': {
+          '0%': { opacity: '0', transform: 'translateX(var(--slide-from, 0))' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        // The orbit's "scroll to spin" cue. Replaces Tailwind's stock
+        // animate-bounce, which is a 1s springy hop that belongs to a starter
+        // template, not to this page. This is a slow 4px breath on an
+        // easeInOutSine curve — an invitation, not a nudge. Infinite is correct
+        // here (unlike hero-drift): it must persist until the visitor acts, and
+        // it only exists while !started, i.e. before the scrub does any work.
+        'orbit-breath': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(4px)' },
+        },
         // Placeholder shimmer while the Square card iframe loads.
         shimmer: {
           '0%': { transform: 'translateX(-100%)' },
@@ -103,6 +120,8 @@ const config: Config = {
         'hero-drift': 'hero-drift 22s ease-out forwards',
         marquee: 'marquee 38s linear infinite',
         'fade-up': 'fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'month-in': 'month-in 0.26s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'orbit-breath': 'orbit-breath 2.9s cubic-bezier(0.37, 0, 0.63, 1) infinite',
         shimmer: 'shimmer 1.4s ease-in-out infinite',
         'cart-bump': 'cart-bump 0.42s cubic-bezier(0.32, 0.72, 0, 1)',
         'row-flash': 'row-flash 0.9s ease-out',

@@ -86,14 +86,24 @@ export const SALES_TAX_LABEL = '8%';
  * Spread into the order body: `...salesTax()`. Present on every order, café and
  * merch alike, so the two endpoints cannot drift apart on whether tax exists.
  */
-export function salesTax(): {
+export function salesTax(overrideCatalogObjectId?: string): {
   taxes: { uid: string; catalog_object_id: string; scope: 'LINE_ITEM' }[];
 } {
   return {
     taxes: [
       {
         uid: SALES_TAX_UID,
-        catalog_object_id: SALES_TAX_CATALOG_OBJECT_ID,
+        // The override exists ONLY so checkout can be exercised end-to-end
+        // against the sandbox, whose catalog has no copy of the production tax
+        // object (Square answers `Tax with catalog object ID ... not found.`).
+        //
+        // It does NOT weaken the fail-closed property this module was written
+        // for. The argument against an env var was that a MISSING one fails
+        // OPEN — an untaxed order sails through and nothing looks wrong until
+        // the quarter's filing. Here a missing value falls back to the real
+        // production id, so the untaxed outcome remains unreachable: unset is
+        // production, and a wrong value still fails loudly at CreateOrder.
+        catalog_object_id: overrideCatalogObjectId?.trim() || SALES_TAX_CATALOG_OBJECT_ID,
         scope: 'LINE_ITEM',
       },
     ],

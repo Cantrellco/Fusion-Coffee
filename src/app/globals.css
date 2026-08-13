@@ -30,6 +30,20 @@
   --tabbar-h: 4.5rem;
 }
 
+/* How far through the coffee orbit's turn we are, 0 -> 1. Written by
+   CoffeeOrbit onto its own sticky panel (never the document root, so style
+   invalidation stays inside that subtree), read by the orbit's overlay layers
+   below via calc(). Registering it as a <number> means an engine that somehow
+   receives garbage falls back to 0 — the neutral, invisible state of every
+   layer that consumes it — rather than inheriting a token that breaks calc().
+   Every consumer still writes var(--orbit-p, 0) so unregistered engines are
+   correct too. Must live at the top level; @property inside @layer is invalid. */
+@property --orbit-p {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -352,6 +366,52 @@
   }
 
   /* ============================================================
+     Party booking board (/party) — two corrections the calendar
+     needs from the specimen card and the menu never does.
+     ============================================================ */
+
+  /* A card you POINT INTO must not move under the pointer. .summer-card's
+     hover lift shifts the whole board 2px the instant the cursor crosses it,
+     which drags the day you were aiming at out from under the click. Keep the
+     warm border and shadow response; drop the travel. */
+  .summer-card.card-static:hover {
+    transform: none;
+  }
+
+  /* On the menu's specimen cards the seasonal rule is a hover reward. Here it
+     is the board's header band — the one piece of colour that says which
+     surface this is — so it rests drawn rather than waiting for a pointer the
+     phone does not have. */
+  .card-static .summer-rule {
+    transform: scaleX(1);
+  }
+
+  /* Saturday and Sunday are the only columns of any month that can be bought,
+     so they get a ground of their own and the other five stay bare cream — the
+     open days then read as a SHAPE before a single number is read, which is the
+     whole justification for showing a month grid at all for a product that
+     sells two weekdays. Drawn as ONE band behind the grid rather than as a tint
+     per cell: per cell, a fully-open month tints nothing but the two header
+     letters, and the column arrives as a tan block floating over nothing. */
+  .weekend-field {
+    background-color: rgba(214, 177, 135, 0.18);
+  }
+
+  /* One diagonal, two consumers: the taken-day cell and the legend key that
+     explains it. They were drawn separately before, so the legend advertised a
+     slash the grid never rendered — the grid struck the number through
+     instead. The calc() stops keep the stroke 1px at both sizes. */
+  .day-slash {
+    background-image: linear-gradient(
+      to top right,
+      transparent calc(50% - 0.5px),
+      rgba(30, 30, 30, 0.32) calc(50% - 0.5px),
+      rgba(30, 30, 30, 0.32) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    );
+  }
+
+  /* ============================================================
      Interior page hero — editorial depth on cream WITHOUT a photo
      (the photo-background hero stays home-only). Pure decoration:
      washes/letterform sit behind z-10 content, never touch contrast.
@@ -461,6 +521,101 @@
   html:not(.js) .orbit-payoff {
     opacity: 1 !important;
     pointer-events: auto !important;
+    /* The caption's rise is now a transform derived from --orbit-p, which is
+       never written without JS. Without this it would sit 14px low forever. */
+    transform: none !important;
+  }
+  html:not(.js) .orbit-rule {
+    transform: none;
+  }
+
+  /* ------------------------------------------------------------
+     Orbit overlays — all four derived from --orbit-p by calc().
+
+     The design rule for this section: nothing here keeps its own clock.
+     --orbit-p is the scrub's OWN eased playhead (see paint() in
+     CoffeeOrbit.tsx), so every layer reports where the FOOTAGE is, not where
+     the finger is, and inherits EASE_TAU_MOBILE_MS for free. A second spring
+     or rAF loop would disagree with the seek chain and compete with it for
+     exactly the frames it needs most, mid-momentum-scroll.
+
+     Consequences worth keeping: every layer is MAPPED, not triggered, so
+     scrolling back un-resolves it frame for frame; and every layer's rest
+     state at p = 0 is its invisible state, which is what makes the no-JS
+     branch above three lines rather than a rescue sheet.
+     ------------------------------------------------------------ */
+
+  /* The light closes onto the can through the back half of the turn. Opacity
+     ONLY — deliberately never scaled. A scaled radial reads as the background
+     creeping, which is the exact percept that got the video's counter-translate
+     removed (see the docblock in CoffeeOrbit.tsx); opacity buys the same
+     luminance-tightening for zero drift exposure. This is the section's one and
+     only full-screen compositor layer — keep it that way. */
+  .orbit-vignette {
+    background: radial-gradient(
+      124% 88% at 50% 44%,
+      transparent 36%,
+      rgba(23, 20, 17, 0.5) 76%,
+      rgba(23, 20, 17, 0.84) 100%
+    );
+    /* Opacity self-clamps to [0,1], so no clamp() needed: 0 until p hits 0.50,
+       full by 0.95. */
+    opacity: calc((var(--orbit-p, 0) - 0.5) * 2.2);
+    will-change: opacity;
+  }
+
+  /* A hairline draws outward from the centre across 0.76 -> 0.90, slightly
+     AHEAD of the caption's own ramp, so the words set down onto a rule that is
+     already there. Same scaleX-from-centre vocabulary as .summer-rule and the
+     .price-row dowel — this is the site's existing gesture, not an import. */
+  .orbit-rule {
+    transform-origin: center;
+    /* Transforms do NOT self-clamp the way opacity does — clamp() is load
+       bearing here or the rule overshoots past scaleX(1). */
+    transform: scaleX(clamp(0, (var(--orbit-p, 0) - 0.76) * 7, 1));
+    /* Engraved, not painted: the oak hairline sits on a 1px espresso shadow so
+       it reads on the pale-wood frames the turn ends on as well as on the dark
+       ones. Static — only the transform ever changes, so this rasterises once
+       and the shadow rides the scaleX instead of being recomputed. */
+    box-shadow: 0 1px 0 rgba(23, 20, 17, 0.6);
+  }
+
+  /* The caption is set by the last degrees of the turn rather than switched on
+     at a threshold: it materialises 0.80 -> 0.96 and rises the last 14px into
+     place by 1.0. NOTE there is deliberately no transition on either property —
+     both are recomputed every frame, and a transition on top of that lags and
+     smears them. The `nearEnd` React state still drives pointer-events alone. */
+  .orbit-payoff {
+    opacity: calc((var(--orbit-p, 0) - 0.8) * 6.25);
+    transform: translateY(calc((1 - clamp(0, (var(--orbit-p, 0) - 0.8) * 5, 1)) * 14px));
+  }
+
+  /* The payoff link's only affordance was group-hover:translate-x-1, which is
+     dead code on the device most of these visitors are holding. An oak underline
+     wipes in on hover, keyboard focus AND press — the .price-row mechanism and
+     curve verbatim. Costs nothing during the scrub; it only ever runs on input. */
+  .orbit-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -0.32em;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      rgba(214, 177, 135, 0.85) 18%,
+      rgba(214, 177, 135, 0.85) 82%,
+      transparent
+    );
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .orbit-link:hover::after,
+  .orbit-link:focus-visible::after,
+  .orbit-link:active::after {
+    transform: scaleX(1);
   }
 
   /* Menu price row: a thin wood-dowel rule wipes in on hover, echoing the
@@ -609,6 +764,14 @@
      separator, so the row is never blank). */
   .price-row::after {
     transform: scaleX(0);
+    transition: none !important;
+  }
+  /* Same call for the orbit link's underline: it's a hover/press affordance,
+     not a resting element, so it stays collapsed and simply appears on input.
+     The orbit's own layers need no rule here — CoffeeOrbit pins --orbit-p to 1
+     under reduced motion, which lands all of them on their settled end state
+     at once with no animation to clamp. */
+  .orbit-link::after {
     transition: none !important;
   }
 }

@@ -2,10 +2,27 @@ import type { Metadata } from 'next';
 import PageHero from '@/components/PageHero';
 import Reveal from '@/components/Reveal';
 import Button from '@/components/Button';
-import BookingForm from '@/components/BookingForm';
+import PartyBooking from '@/components/party/PartyBooking';
 import { Clock, Bean, Mail, Phone, ArrowUpRight } from '@/components/icons';
 import { CornerBotanical, Sprig } from '@/components/Botanical';
 import { site, partyBooking, photos, ogBase } from '@/lib/site';
+import {
+  formatPrice,
+  BOOKABLE_DOWS,
+  PARTY_PRICE_CENTS,
+  SLOTS_BY_DOW,
+} from '@/lib/party';
+
+const DOW_PLURAL = [
+  'Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays',
+];
+
+/** The days we host and the windows on each, straight off the slot table. */
+const HOSTING = BOOKABLE_DOWS.map((dow) => ({
+  dow,
+  label: DOW_PLURAL[dow],
+  slots: SLOTS_BY_DOW[dow] ?? [],
+})).filter((d) => d.slots.length > 0);
 
 export const metadata: Metadata = {
   title: 'Parties',
@@ -20,19 +37,6 @@ export const metadata: Metadata = {
       'Book Fusion Coffee for a private party in downtown Fairfield, IL. Saturday and Sunday booking windows, with drinks and bites made to order for your group.',
   },
 };
-
-// Group the flat slot list by day so the two Sunday windows sit together under
-// one heading, rather than reading as two separate "Sunday" cards.
-const windowsByDay = partyBooking.slots.reduce<{ day: string; times: string[] }[]>(
-  (acc, slot) => {
-    const time = `${slot.start} – ${slot.end}`;
-    const existing = acc.find((d) => d.day === slot.day);
-    if (existing) existing.times.push(time);
-    else acc.push({ day: slot.day, times: [time] });
-    return acc;
-  },
-  [],
-);
 
 // Distinct marks for the three value props (space / drinks / planning).
 const includeIcons = [Sprig, Bean, Clock];
@@ -82,58 +86,83 @@ export default function PartyPage() {
         </div>
       </section>
 
-      {/* Available windows */}
-      <section className="relative overflow-hidden bg-cream pb-16 grain-soft md:pb-28">
+      {/* Available windows — the calendar IS this section now */}
+      <section
+        id="book"
+        // scroll-mt keeps the heading clear of the fixed header pill when
+        // anything links to #book.
+        className="relative scroll-mt-28 overflow-hidden bg-cream pb-16 grain-soft md:pb-28"
+      >
         <CornerBotanical position="tr" tone="text-sage/[0.15]" size="h-52 w-52" />
-        <div className="relative z-10 mx-auto grid max-w-edge gap-12 px-5 sm:px-8 md:grid-cols-12 md:gap-16">
-          <div className="md:col-span-4">
-            <Reveal>
-              <p className="eyebrow inline-flex items-center gap-3 text-brick">
-                <Sprig className="h-4 w-4 shrink-0 text-sage" />
-                <span className="h-px w-8 bg-ink/25" />
-                Available windows
-              </p>
-            </Reveal>
-            <Reveal delay={0.05}>
-              <h2 className="mt-6 text-balance font-display text-fluid-xl leading-[1.05] text-ink">
-                Choose your window.
-              </h2>
-            </Reveal>
-            <Reveal delay={0.1}>
-              <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-muted">
-                We host on the days the café is quietest. Pick the time that
-                fits and send a request — we&rsquo;ll confirm the date with you.
-              </p>
+        {/* One band across the full measure at xl: the offer set in type on the
+            left, the board in the middle, the times panel on the right. Stacked
+            below that, the heading simply sits above the booking flow as before. */}
+        <div className="relative z-10 mx-auto grid max-w-edge gap-12 px-5 sm:px-8 xl:grid-cols-12 xl:gap-10">
+          {/* Three arrangements of the same two blocks:
+              — phone: `contents` dissolves this wrapper so the heading and the
+                offer table become grid items in their own right, and the table
+                can `order` itself below the board. Nothing should stand between
+                a thumb and the calendar it came for.
+              — lg: the band hasn't formed yet and this block runs the full
+                measure, so the table sits beside the copy rather than leaving
+                the right half of a 700px-tall block empty.
+              — xl: back to one narrow column, stacked. */}
+          <div className="contents lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-12 xl:col-span-4 xl:block">
+            <div className="max-w-2xl xl:max-w-none">
+              <Reveal>
+                <p className="eyebrow inline-flex items-center gap-3 text-brick">
+                  <Sprig className="h-4 w-4 shrink-0 text-sage" />
+                  <span className="h-px w-8 bg-ink/25" />
+                  Available windows
+                </p>
+              </Reveal>
+              <Reveal delay={0.05}>
+                <h2 className="mt-6 text-balance font-display text-fluid-xl leading-[1.05] text-ink">
+                  Choose your window.
+                </h2>
+              </Reveal>
+              <Reveal delay={0.1}>
+                <p className="mt-6 max-w-md text-lg leading-relaxed text-ink-muted xl:max-w-none">
+                  {formatPrice(PARTY_PRICE_CENTS)} for the whole café — two
+                  hours, just your group. We host on the days the shop is
+                  quietest; pick a date and time and it&rsquo;s yours.
+                </p>
+              </Reveal>
+            </div>
+
+            {/* The standing offer, read off SLOTS_BY_DOW rather than retyped as
+                copy — a change to the slot table can't leave this advertising a
+                window the calendar won't sell. */}
+            <Reveal delay={0.15} className="order-3 lg:order-none">
+              <dl className="max-w-md divide-y divide-ink/10 border-y border-ink/10 lg:mt-1 xl:mt-9 xl:max-w-none">
+                {HOSTING.map((day) => (
+                  <div
+                    key={day.dow}
+                    className="flex items-baseline justify-between gap-6 py-4"
+                  >
+                    <dt className="text-sm text-ink-muted">{day.label}</dt>
+                    <dd className="text-right font-display text-base tabular-nums text-ink">
+                      {day.slots.map((s) => (
+                        <span key={s.label} className="block">
+                          {s.label}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                ))}
+                <div className="flex items-baseline justify-between gap-6 py-4">
+                  <dt className="text-sm text-ink-muted">Private buyout</dt>
+                  <dd className="font-display text-2xl tabular-nums text-ink">
+                    {formatPrice(PARTY_PRICE_CENTS)}
+                  </dd>
+                </div>
+              </dl>
             </Reveal>
           </div>
 
-          <div className="md:col-span-8">
-            <div className="grid gap-6 sm:grid-cols-2">
-              {windowsByDay.map((entry, i) => (
-                <Reveal key={entry.day} delay={i * 0.08}>
-                  <div className="summer-card relative flex h-full flex-col p-8">
-                    <span className="summer-rule" aria-hidden />
-                    <div className="flex items-center gap-4">
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-ink/15 text-brick">
-                        <Clock className="h-5 w-5" />
-                      </span>
-                      <p className="font-display text-2xl text-ink">{entry.day}</p>
-                    </div>
-                    <div className="mt-6 flex flex-wrap gap-2.5">
-                      {entry.times.map((time) => (
-                        <span
-                          key={time}
-                          className="border border-ink/15 bg-cream/60 px-3.5 py-1.5 text-sm tracking-wide text-ink"
-                        >
-                          {time}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
+          <Reveal delay={0.12} className="order-2 lg:order-none xl:col-span-8">
+            <PartyBooking />
+          </Reveal>
         </div>
       </section>
 
@@ -165,31 +194,11 @@ export default function PartyPage() {
         </div>
       </section>
 
-      {/* Request form + direct contact */}
+      {/* Direct contact */}
       <section className="relative overflow-hidden bg-cream py-16 grain-soft md:py-28">
         <CornerBotanical position="bl" tone="text-sage/[0.15]" size="h-60 w-60" />
-        <div className="relative z-10 mx-auto grid max-w-edge gap-12 px-5 sm:px-8 md:grid-cols-12 md:gap-16">
-          {/* Form */}
-          <div className="md:col-span-7">
-            <Reveal>
-              <p className="eyebrow inline-flex items-center gap-3 text-brick">
-                <Sprig className="h-4 w-4 shrink-0 text-sage" />
-                <span className="h-px w-8 bg-ink/25" />
-                Request a booking
-              </p>
-            </Reveal>
-            <Reveal delay={0.05}>
-              <h2 className="mt-6 max-w-xl text-balance font-display text-fluid-xl leading-[1.05] text-ink">
-                Tell us about your party.
-              </h2>
-            </Reveal>
-            <Reveal delay={0.12} className="mt-10">
-              <BookingForm slots={partyBooking.slots} />
-            </Reveal>
-          </div>
-
-          {/* Direct contact aside */}
-          <div className="md:col-span-5">
+        <div className="relative z-10 mx-auto max-w-edge px-5 sm:px-8">
+          <div className="max-w-xl">
             <Reveal delay={0.1}>
               <div className="border border-ink/12 bg-cream">
                 <div className="p-8 sm:p-10">
