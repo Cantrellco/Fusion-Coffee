@@ -140,12 +140,16 @@ export const partyBooking: {
   title: 'Book the shop for your party.',
   intro:
     'Birthdays, showers, team mornings and small celebrations — reserve a window and we’ll open the space just for your group, with drinks and bites made to order.',
-  // Hosted windows: Saturday afternoon (after regular service) and two Sunday
+  // Hosted windows: Saturday evening (after regular service) and two Sunday
   // blocks (the shop is otherwise closed Sundays).
+  //
+  // These mirror SLOTS_BY_DOW in lib/party.ts, which is what the calendar
+  // actually sells from — kept in step so nothing here can advertise a window
+  // the booking engine won't offer. Change both together.
   slots: [
-    { day: 'Saturday', short: 'Sat', start: '3:00 PM', end: '5:00 PM' },
-    { day: 'Sunday', short: 'Sun', start: '12:00 PM', end: '2:00 PM' },
-    { day: 'Sunday', short: 'Sun', start: '2:00 PM', end: '4:00 PM' },
+    { day: 'Saturday', short: 'Sat', start: '4:30 PM', end: '6:30 PM' },
+    { day: 'Sunday', short: 'Sun', start: '1:00 PM', end: '3:00 PM' },
+    { day: 'Sunday', short: 'Sun', start: '4:00 PM', end: '6:00 PM' },
   ],
   includes: [
     {

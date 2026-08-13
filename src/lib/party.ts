@@ -43,17 +43,33 @@ export type PartySlot = {
  * Bookable windows keyed by `Date#getDay()` — 0 = Sunday, 6 = Saturday.
  * The café hosts on the days it is otherwise quietest: Saturday after
  * regular service, and Sunday, when the shop is closed.
+ *
+ * DELIBERATELY IDENTICAL to Little Town's `SLOTS_BY_DOW` (their assets/js/main.js).
+ * The two venues sell the same room from two storefronts, and until 2026-08-13
+ * their windows only partly overlapped — Fusion's Saturday 3–5 caught their
+ * 4:30–6:30 by thirty minutes. Aligning them means a booking on either side
+ * names the same window with the same string, which is what lets the shared
+ * ledger stay a plain text list instead of needing interval arithmetic.
+ *
+ * If these ever diverge again, the cross-venue block silently degrades: the
+ * day-level guard in `freeSlots` still prevents a double sale, but partly-free
+ * days stop being sellable. Change both sides together.
  */
 export const SLOTS_BY_DOW: Record<number, PartySlot[]> = {
-  6: [{ label: '3:00–5:00 PM', start: '3:00 PM', end: '5:00 PM' }],
+  6: [{ label: '4:30–6:30 PM', start: '4:30 PM', end: '6:30 PM' }],
   0: [
-    { label: '12:00–2:00 PM', start: '12:00 PM', end: '2:00 PM' },
-    { label: '2:00–4:00 PM', start: '2:00 PM', end: '4:00 PM' },
+    { label: '1:00–3:00 PM', start: '1:00 PM', end: '3:00 PM' },
+    { label: '4:00–6:00 PM', start: '4:00 PM', end: '6:00 PM' },
   ],
 };
 
-/** Price of a Fusion buyout, in cents. One flat rate, any window. */
-export const PARTY_PRICE_CENTS = 16500;
+/**
+ * Price of a Fusion buyout, in cents. One flat rate, any window.
+ *
+ * Matches Fusion's share of Little Town's $295 "Little Town + Fusion" combo, so
+ * the café is worth the same whichever storefront sold it.
+ */
+export const PARTY_PRICE_CENTS = 17500;
 
 /** Bookable days, in `getDay()` order, for rendering legends and copy. */
 export const BOOKABLE_DOWS = [6, 0];
