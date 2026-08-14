@@ -28,6 +28,11 @@
 // ─── SETTINGS ───────────────────────────────────────────────────────────────
 
 var CALENDAR_NAME = 'Little Town and Fusion Parties';
+/**
+ * Fallback only. Alerts actually go to whoever's trigger is running — see
+ * ownerEmail_(). One Sheet can be set up by BOTH shops, and each should hear
+ * about its own failures rather than both landing in one inbox.
+ */
 var OWNER_EMAIL = 'littletownplayhousellc@gmail.com';
 var VENUE_ADDRESS = '205 East Main Street, Fairfield, IL 62837';
 var PARTIES_URL = 'https://thelittletownplayhouse.com/pages/parties';
@@ -103,9 +108,9 @@ var MAIL_LOOKBACK = '1y';
  * private to the account that owns the calendar and they can't be set on
  * someone else's behalf.
  */
-var SHARE_CALENDAR_WITH = ['fusioncoffeellc@gmail.com'];
+var SHARE_CALENDAR_WITH = [];
 
-var VERSION = '2.3.0';
+var VERSION = '2.4.0';
 
 // ─── THE MENU (this is his entire interface) ────────────────────────────────
 
@@ -182,7 +187,7 @@ function syncNow() {
 
 /** A plain-English "is this thing on?" for when he wonders. */
 function showStatus() {
-  var props = PropertiesService.getScriptProperties();
+  var props = PropertiesService.getUserProperties();
   var last = props.getProperty('lastRun');
   var running = false;
   var triggers = ScriptApp.getProjectTriggers();
@@ -256,7 +261,7 @@ function syncNow_() {
 
   out.removed = pruneCancelled_();
 
-  PropertiesService.getScriptProperties().setProperty(
+  PropertiesService.getUserProperties().setProperty(
     'lastRun', Utilities.formatDate(new Date(), TIMEZONE, 'EEE d MMM, h:mm a')
   );
   Logger.log('Sync: ' + out.added + ' added, ' + out.unchanged + ' already there, ' +
@@ -613,7 +618,12 @@ function tzOffsetMs_(dt) {
 // ─── CALENDAR PLUMBING ──────────────────────────────────────────────────────
 
 function getCalendar_() {
-  var props = PropertiesService.getScriptProperties();
+  // USER properties, not SCRIPT properties. Script properties are shared by
+  // everyone who uses this Sheet, so with both shops set up the second one
+  // would read the FIRST one's calendar id. If that calendar happens to be
+  // shared with them it resolves — read-only — and every createEvent throws.
+  // Per-user storage gives each shop its own calendar and its own reminders.
+  var props = PropertiesService.getUserProperties();
   var cached = props.getProperty('calendarId');
   if (cached) {
     var hit = CalendarApp.getCalendarById(cached);
@@ -664,7 +674,7 @@ function findEventByOrderId_(cal, orderId) {
 function alertOwner_(err, context) {
   try {
     var msg = String((err && err.message) || err);
-    var props = PropertiesService.getScriptProperties();
+    var props = PropertiesService.getUserProperties();
     var key = 'lastAlert:' + msg.slice(0, 60);
     if (Date.now() - Number(props.getProperty(key) || 0) < 6 * 60 * 60 * 1000) return;
     props.setProperty(key, String(Date.now()));
@@ -681,8 +691,23 @@ function alertOwner_(err, context) {
   }
 }
 
+/**
+ * Whose inbox this run's alerts belong in. For a time-based trigger this is the
+ * account that created it, so each shop gets its own. Falls back to the
+ * constant when Google declines to say (it can return '' in some contexts).
+ */
+function ownerEmail_() {
+  try {
+    var who = Session.getEffectiveUser().getEmail();
+    if (who) return who;
+  } catch (ignored) {
+    // Permission not granted for this context — fall through.
+  }
+  return OWNER_EMAIL;
+}
+
 function notify_(subject, body) {
-  MailApp.sendEmail(OWNER_EMAIL, 'Little Town — ' + subject, body);
+  MailApp.sendEmail(ownerEmail_(), 'Little Town — ' + subject, body);
 }
 
 /**
