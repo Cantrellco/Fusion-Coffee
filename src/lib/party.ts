@@ -202,11 +202,8 @@ export function longDateLabel(d: Date): string {
 /**
  * Which slots are still open on a given date.
  *
- * Single-slot days (Saturday) are treated as fully booked the moment ANYTHING
- * is stored against that date, rather than matching the exact time wording.
- * Little Town's engine does the same, for a reason worth keeping: if the slot
- * time is ever edited, a label mismatch would silently un-book a party that
- * has already been paid for. Matching on the date alone fails safe.
+ * A date is only fully unavailable when every one of its windows is taken —
+ * by us, by next door, or between them.
  */
 export function freeSlots(
   dow: number,
@@ -217,16 +214,28 @@ export function freeSlots(
   const all = SLOTS_BY_DOW[dow] ?? [];
   if (all.length === 0) return [];
 
-  // Cross-venue bookings block at DAY granularity, not slot. Fusion's windows
-  // and Little Town's don't line up — Fusion's Saturday 3–5 overlaps their
-  // 4:30–6:30 by thirty minutes, Sunday 12–2 overlaps their 1–3 by an hour —
-  // so a slot-level compare would need interval math and would still leave
-  // half-usable windows on sale. Over-blocking the whole date is the deliberate
-  // call: with all sales final, selling the room twice is unrecoverable, and
-  // losing one window on a rare double-booked weekend is not.
-  if (crossBooked && (crossBooked[key]?.length ?? 0) > 0) return [];
+  const crossTaken = crossBooked?.[key] ?? [];
 
-  const taken = booked[key] ?? [];
+  // Cross-venue bookings block the WINDOW, not the day. Both venues now sell
+  // the same three windows and name them with the same strings, so a party next
+  // door at Sunday 1–3 leaves Sunday 4–6 genuinely free and it should stay on
+  // sale. (Until the slot tables were aligned these only partly overlapped,
+  // which is why this used to black out the whole date.)
+  //
+  // ONE EXCEPTION, and it is the safety net: if a cross entry names a window
+  // this weekday doesn't have, the two sides' slot tables have drifted apart
+  // and we can no longer tell which of our windows it collides with. Fall back
+  // to blocking the day. With all sales final, selling the room twice is
+  // unrecoverable while losing a window for a weekend is not.
+  const unrecognised = crossTaken.some((s) => !all.some((slot) => slot.label === s));
+  if (unrecognised) return [];
+
+  // Single-slot days (Saturday) are fully booked the moment ANYTHING is stored
+  // against that date, rather than matching the exact time wording. Little
+  // Town's engine does the same, for a reason worth keeping: if the slot time
+  // is ever edited, a label mismatch would silently un-book a party that has
+  // already been paid for. Matching on the date alone fails safe.
+  const taken = [...(booked[key] ?? []), ...crossTaken];
   if (all.length === 1) return taken.length ? [] : all;
   return all.filter((slot) => !taken.includes(slot.label));
 }
