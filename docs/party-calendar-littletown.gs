@@ -28,6 +28,17 @@
 // ─── SETTINGS ───────────────────────────────────────────────────────────────
 
 var CALENDAR_NAME = 'Little Town and Fusion Parties';
+
+/**
+ * What the calendar used to be called, before Fusion's bookings joined it.
+ *
+ * getCalendar_ falls back to this and RENAMES it in place, so an account that
+ * was already set up keeps the calendar it has -- with every event, every
+ * reminder and every subscriber intact -- instead of quietly getting a second,
+ * empty one under the new name. Safe to leave here forever; once no calendar
+ * answers to it, the fallback simply never fires.
+ */
+var CALENDAR_NAME_LEGACY = 'Little Town Parties';
 /**
  * Fallback only. Alerts actually go to whoever's trigger is running — see
  * ownerEmail_(). One Sheet can be set up by BOTH shops, and each should hear
@@ -110,7 +121,7 @@ var MAIL_LOOKBACK = '1y';
  */
 var SHARE_CALENDAR_WITH = [];
 
-var VERSION = '2.4.0';
+var VERSION = '2.4.1';
 
 // ─── THE MENU (this is his entire interface) ────────────────────────────────
 
@@ -632,14 +643,33 @@ function getCalendar_() {
     // what happens if Script Properties ride along with a copied sheet.
   }
 
-  var found = CalendarApp.getCalendarsByName(CALENDAR_NAME);
-  var cal = (found && found.length)
-    ? found[0]
-    : CalendarApp.createCalendar(CALENDAR_NAME, {
-        summary: 'Party buyouts from thelittletownplayhouse.com and fusioncoffeeshop.com',
-        timeZone: TIMEZONE,
-        color: CalendarApp.Color.PINK
-      });
+  var cal = CalendarApp.getCalendarsByName(CALENDAR_NAME)[0];
+
+  // Already set up under the old name: rename rather than create. Only ever
+  // touches a calendar this account OWNS -- setName on someone else's shared
+  // calendar throws, and that throw is caught so a subscriber never renames the
+  // owner's copy out from under them.
+  if (!cal) {
+    var legacy = CalendarApp.getCalendarsByName(CALENDAR_NAME_LEGACY)[0];
+    if (legacy) {
+      try {
+        legacy.setName(CALENDAR_NAME);
+        cal = legacy;
+        Logger.log('Renamed "' + CALENDAR_NAME_LEGACY + '" to "' + CALENDAR_NAME + '".');
+      } catch (err) {
+        Logger.log('Could not rename the old calendar (probably not ours): ' +
+                   ((err && err.message) || err));
+      }
+    }
+  }
+
+  if (!cal) {
+    cal = CalendarApp.createCalendar(CALENDAR_NAME, {
+      summary: 'Party buyouts from thelittletownplayhouse.com and fusioncoffeeshop.com',
+      timeZone: TIMEZONE,
+      color: CalendarApp.Color.PINK
+    });
+  }
 
   props.setProperty('calendarId', cal.getId());
   return cal;

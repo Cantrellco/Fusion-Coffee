@@ -4,7 +4,6 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import SquareCard from '@/components/order/SquareCard';
 import { site, partyBooking } from '@/lib/site';
 import { formatPrice, PARTY_PRICE_CENTS } from '@/lib/party';
-import { SALES_TAX_LABEL } from '@/lib/tax';
 import { ArrowUpRight } from '@/components/icons';
 
 const SQ_APP_ID = process.env.NEXT_PUBLIC_SQUARE_APP_ID;
@@ -143,11 +142,17 @@ export default function PartyCheckout({
         <p className="eyebrow text-ink/45">Your party</p>
         <p className="mt-3 font-display text-lg leading-snug text-ink">{label}</p>
 
+        {/* This number IS the charge. A buyout carries no sales tax (see the
+            header of functions/api/party-checkout.ts), so nothing is added
+            after this screen and the line says so rather than leaving the
+            customer to wonder what the card will actually take. */}
         <div className="mt-6 flex items-baseline justify-between border-t border-ink/10 pt-5">
           <span className="text-sm text-ink-muted">Private buyout</span>
           <span className="font-display text-2xl text-ink">{total}</span>
         </div>
-        <p className="mt-1 text-right text-xs text-ink-muted">plus {SALES_TAX_LABEL} sales tax</p>
+        <p className="mt-1 text-right text-xs text-ink-muted">
+          Total — no tax or fees added
+        </p>
 
         {/* All sales are final, so the last screen before the charge restates
             what the charge is for — not just the date and the number. */}

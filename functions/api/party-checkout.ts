@@ -7,8 +7,20 @@
 // Deliberately a separate Worker from checkout.ts rather than a third `kind`
 // on it. That file moves real café and merch money every day and has shipped
 // broken once; a booking flow with an entirely different shape has no business
-// sharing its branches. What MUST NOT drift — the sales tax object and the
-// idempotency contract — is imported and mirrored rather than re-invented.
+// sharing its branches. What MUST NOT drift — the idempotency contract — is
+// imported and mirrored rather than re-invented.
+//
+// ── NO SALES TAX ON A BUYOUT ────────────────────────────────────────────────
+// /order and /merch declare the shop's 8% catalog tax on every order (see
+// src/lib/tax.ts). This endpoint deliberately does not, and that is a business
+// decision recorded here rather than an omission to be "fixed": the buyout is
+// billed as one flat fee for the room and the window, not as a sale of the
+// drinks made during it. The customer is charged exactly PARTY_PRICE_CENTS.
+//
+// If that treatment ever changes, tax goes back BOTH here and on the summary
+// in PartyCheckout.tsx in the same commit. The page states the charge before
+// the card form; a tax added on only one side means the card is charged more
+// than the customer agreed to.
 //
 // ── THE ORDER OF OPERATIONS IS THE DESIGN ───────────────────────────────────
 //   1. validate everything, server-side, trusting nothing from the client
@@ -29,7 +41,6 @@ import {
   slotStartISO,
   validateBooking,
 } from '../../src/lib/party';
-import { salesTax, taxableLine } from '../../src/lib/tax';
 import { appendLedger, readLedger, shopifyConfigured, type ShopifyEnv } from './_shopify';
 
 type Ctx = {
@@ -38,8 +49,6 @@ type Ctx = {
     SQUARE_ACCESS_TOKEN?: string;
     SQUARE_LOCATION_ID?: string;
     SQUARE_ENVIRONMENT?: string;
-    /** Sandbox-only override; unset means the production tax object. */
-    SQUARE_TAX_OBJECT_ID?: string;
   };
 };
 
@@ -162,7 +171,6 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
             name: `Private party buyout — ${windowLabel}`,
             quantity: '1',
             base_price_money: { amount: PARTY_PRICE_CENTS, currency: 'USD' },
-            ...taxableLine(true),
           },
         ],
         fulfillments: [
@@ -177,7 +185,9 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
             },
           },
         ],
-        ...salesTax(env.SQUARE_TAX_OBJECT_ID),
+        // No `taxes` here on purpose — see the header. The line above carries
+        // no `applied_taxes` either; both halves must stay absent together, or
+        // Square rejects an `applied_taxes` uid the order never declared.
         source: { name: 'fusioncoffeeshop.com' },
         metadata: {
           channel: 'website',
@@ -199,8 +209,10 @@ export const onRequestPost = async (ctx: Ctx): Promise<Response> => {
   }
 
   // ---- 2. The payment -----------------------------------------------------
-  // Square's own total is the charged amount — it carries the tax Square
-  // computed, which the browser could not have known.
+  // Square's own total is still the charged amount even though nothing is
+  // added to it any more. Reading it back rather than re-sending the constant
+  // keeps the charge equal to the order Square actually created, so a future
+  // tax or fee cannot end up on the order and not on the payment.
   const amount = orderData.order.total_money?.amount ?? PARTY_PRICE_CENTS;
   const paymentRes = await fetch(`${base}/v2/payments`, {
     method: 'POST',
