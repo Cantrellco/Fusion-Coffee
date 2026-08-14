@@ -114,8 +114,9 @@ function Confirmation({ booking, label }: { booking: PaidBooking; label: string 
           and a phone number only, so Square has no address to send one to.
           Saying otherwise sends people hunting through their inbox. */}
       <p className="mx-auto mt-6 max-w-md text-pretty text-sm leading-relaxed text-ink-muted">
-        Keep this order number for your records — we&rsquo;ll call before the day
-        to sort drinks and anything you want set up.
+        Keep this order number for your records. Your barista will have the bar
+        ready — we&rsquo;ll call before the day to sort drinks and anything you
+        want set up.
       </p>
 
       {/* The one case staff must fix by hand: the payment landed but the window

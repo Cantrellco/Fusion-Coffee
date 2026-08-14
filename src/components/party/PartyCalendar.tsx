@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { site } from '@/lib/site';
+import { site, partyBooking } from '@/lib/site';
 import {
   buildMonth,
   bookingWindow,
@@ -519,6 +519,12 @@ export default function PartyCalendar({
                       {formatPrice(PARTY_PRICE_CENTS)}
                     </span>
                   </div>
+
+                  {/* What the price actually buys, on the last panel before the
+                      customer leaves to pay. */}
+                  <p className="mt-4 text-pretty text-sm leading-relaxed text-ink-muted">
+                    {partyBooking.staffing.line}
+                  </p>
 
                   {onCheckout ? (
                     <button

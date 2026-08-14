@@ -150,6 +150,16 @@ export default function PartyPage() {
                     </dd>
                   </div>
                 ))}
+                {/* Sits with the windows and the price rather than in the
+                    "what's included" section further down: this is the table
+                    someone reads to answer "what am I getting for $165", and a
+                    buyout that doesn't say otherwise reads as the room alone. */}
+                <div className="flex items-baseline justify-between gap-6 py-4">
+                  <dt className="text-sm text-ink-muted">Included</dt>
+                  <dd className="text-right font-display text-base text-ink">
+                    {partyBooking.staffing.short}
+                  </dd>
+                </div>
                 <div className="flex items-baseline justify-between gap-6 py-4">
                   <dt className="text-sm text-ink-muted">Private buyout</dt>
                   <dd className="font-display text-2xl tabular-nums text-ink">

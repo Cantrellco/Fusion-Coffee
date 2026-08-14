@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react';
 import SquareCard from '@/components/order/SquareCard';
-import { site } from '@/lib/site';
+import { site, partyBooking } from '@/lib/site';
 import { formatPrice, PARTY_PRICE_CENTS } from '@/lib/party';
 import { SALES_TAX_LABEL } from '@/lib/tax';
 import { ArrowUpRight } from '@/components/icons';
@@ -148,6 +148,12 @@ export default function PartyCheckout({
           <span className="font-display text-2xl text-ink">{total}</span>
         </div>
         <p className="mt-1 text-right text-xs text-ink-muted">plus {SALES_TAX_LABEL} sales tax</p>
+
+        {/* All sales are final, so the last screen before the charge restates
+            what the charge is for — not just the date and the number. */}
+        <p className="mt-5 text-pretty border-t border-ink/10 pt-5 text-sm leading-relaxed text-ink-muted">
+          {partyBooking.staffing.line}
+        </p>
 
         {/* Contact */}
         <div className="mt-7 grid gap-5">

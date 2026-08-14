@@ -134,12 +134,13 @@ export const partyBooking: {
   title: string;
   intro: string;
   slots: BookingSlot[];
+  staffing: { short: string; line: string };
   includes: { title: string; body: string }[];
 } = {
   eyebrow: 'Private bookings',
   title: 'Book the shop for your party.',
   intro:
-    'Birthdays, showers, team mornings and small celebrations — reserve a window and we’ll open the space just for your group, with drinks and bites made to order.',
+    'Birthdays, showers, team mornings and small celebrations — reserve a window and we’ll open the space just for your group, with a barista on the bar making drinks and bites to order.',
   // Hosted windows: Saturday evening (after regular service) and two Sunday
   // blocks (the shop is otherwise closed Sundays).
   //
@@ -151,6 +152,19 @@ export const partyBooking: {
     { day: 'Sunday', short: 'Sun', start: '1:00 PM', end: '3:00 PM' },
     { day: 'Sunday', short: 'Sun', start: '4:00 PM', end: '6:00 PM' },
   ],
+  /**
+   * Staffing is part of the package and the easiest thing to assume away: a
+   * "private buyout" could just as plausibly mean the room and the keys. So it
+   * is stated on the offer table, on the summary the customer confirms, and
+   * again on the payment screen — one string, so those three can never end up
+   * promising different things.
+   */
+  staffing: {
+    /** Table cell and other tight spots. */
+    short: 'A barista on the bar',
+    /** Sentence form, for the summary and the payment screen. */
+    line: 'A barista is on the bar for your whole window — every drink made to order for your group.',
+  },
   includes: [
     {
       title: 'The whole space',
@@ -158,7 +172,7 @@ export const partyBooking: {
     },
     {
       title: 'Made to order',
-      body: 'A full bar of espresso, matcha and seasonal drinks, plus bowls and bites, prepared fresh for everyone through your booking.',
+      body: 'A barista is on the bar for the whole window — espresso, matcha and seasonal drinks, plus bowls and bites, prepared fresh for everyone through your booking.',
     },
     {
       title: 'Simple to plan',
