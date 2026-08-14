@@ -57,5 +57,5 @@ docs/*
 # the cross-venue metafield contract and the Google Calendar sync live nowhere
 # else, and the next person to touch this needs them.
 !docs/party-booking-handoff.md
-!docs/party-calendar.md
-!docs/party-calendar.gs
+!docs/party-calendar-additions.md
+!docs/party-calendar-littletown.gs
