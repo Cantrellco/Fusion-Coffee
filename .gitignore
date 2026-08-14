@@ -50,4 +50,12 @@ coverage/
 
 # Unrelated tooling that happens to live in this folder (not part of the site)
 superpowers/
-docs/
+# `docs/*` rather than `docs/` on purpose: git never descends into an excluded
+# DIRECTORY, so a `!docs/…` negation below would be ignored too.
+docs/*
+# …except the party booking docs, which are design notes for shipped code —
+# the cross-venue metafield contract and the Google Calendar sync live nowhere
+# else, and the next person to touch this needs them.
+!docs/party-booking-handoff.md
+!docs/party-calendar.md
+!docs/party-calendar.gs
