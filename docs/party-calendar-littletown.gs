@@ -27,7 +27,7 @@
 
 // ─── SETTINGS ───────────────────────────────────────────────────────────────
 
-var CALENDAR_NAME = 'Little Town Parties';
+var CALENDAR_NAME = 'Little Town and Fusion Parties';
 var OWNER_EMAIL = 'littletownplayhousellc@gmail.com';
 var VENUE_ADDRESS = '205 East Main Street, Fairfield, IL 62837';
 var PARTIES_URL = 'https://thelittletownplayhouse.com/pages/parties';
@@ -626,7 +626,7 @@ function getCalendar_() {
   var cal = (found && found.length)
     ? found[0]
     : CalendarApp.createCalendar(CALENDAR_NAME, {
-        summary: 'Private buyouts booked on thelittletownplayhouse.com',
+        summary: 'Party buyouts from thelittletownplayhouse.com and fusioncoffeeshop.com',
         timeZone: TIMEZONE,
         color: CalendarApp.Color.PINK
       });
