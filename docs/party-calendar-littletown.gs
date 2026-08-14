@@ -49,8 +49,14 @@ var CHECK_EVERY_MINUTES = 15;
  */
 var COLOR_LITTLE_TOWN = '4';  // Flamingo — pink, the ordinary buyout
 var COLOR_WITH_FUSION = '9';  // Blueberry — blue, Fusion opens and needs a barista
-var COLOR_FUSION_ONLY = '10'; // Basil — green, the café only, playhouse is free
-var COLOR_UNKNOWN     = '8';  // Graphite — package not known, check Shopify
+var COLOR_FUSION_ONLY = '8';  // Graphite — near-black, the café only, playhouse free
+var COLOR_UNKNOWN     = '11'; // Tomato — red, package not known, check Shopify
+
+// Graphite was COLOR_UNKNOWN until Fusion-only claimed it: Google's palette has
+// no black and Graphite is the closest thing to it. Unknown moved to Tomato
+// rather than sharing — two meanings on one colour defeats the point of
+// colouring them, and red suits "something needs looking at" better than the
+// grey it had, which read as "nothing much".
 
 /** Popup reminders, in minutes before the party. 7200 = 5 days, 1440 = 1 day. */
 var POPUP_REMINDERS_MIN = [7200, 1440, 120];
