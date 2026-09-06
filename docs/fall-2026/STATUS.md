@@ -21,3 +21,20 @@ Actual Claude Code session: `0135e389-a31a-473e-aee0-db761be77229`. Resume this 
 ## Release
 
 User's existing Fusion deployment preference covers both Cloudflare deployments. After completed image + code review, Claude should commit source and build from an isolated worktree with production Square public values, then deploy and verify BOTH `fusion-coffee.pages.dev` and `fusion-coffee-8zb.pages.dev`/`www.fusioncoffeeshop.com`. Read project memories `deploy-means-both.md`, `checkout-money-safety.md`, and `cloudflare-client-token.md` before release. Never expose credentials in output.
+
+## Release completed — 2026-09-06
+
+**Source SHA:** `edbca661b43a88c1c369ae968e4fbd7fe6c88a43` (branch `main`, pushed).
+
+**Production build:** isolated detached worktree `/private/tmp/fusion-fall-release-edbca66` at the release SHA (no `.env.local`/`.dev.vars`; symlinked `node_modules`; Node 20.20.2; `GH_PAGES_BASE=` empty; inline production `NEXT_PUBLIC_SQUARE_APP_ID=sq0idp-P7wBm00ZxoHfcD8sPkxZ_A`, `NEXT_PUBLIC_SQUARE_LOCATION_ID=LJJEGQGXDHP0Y`, `NEXT_PUBLIC_SQUARE_ENV=production`). 15/15 static pages. Whole `out/` tree contains only the production app id and location id — zero sandbox app id / `squareupsandbox` / env strings. All eight `out/images/fall/*.svg` are byte-identical (sha256) to the committed sources.
+
+**Deployments (personal first, client second), wrangler 4.129.0, Node 24:**
+
+| Target | Account | Deployment URL | Alias / domain |
+| --- | --- | --- | --- |
+| Personal | `cf6e690feb8c6532cecdfb31a55fbe0d` | https://55445267.fusion-coffee.pages.dev | https://fusion-coffee.pages.dev |
+| Client | `e71478347cb65347d00374cbffd8d6f9` | https://307e6e7a.fusion-coffee-8zb.pages.dev | https://fusion-coffee-8zb.pages.dev · https://www.fusioncoffeeshop.com |
+
+Both uploaded 116 files and compiled the Functions/Worker bundle (shared menu/pricing). Personal used stored wrangler OAuth with no API token in env; client read its token straight into the child process env only (never printed).
+
+**Live verification (all three hosts — personal, client, custom domain):** `/menu/` shows all 8 fall names and 0 retired summer names (HTTP 200); all 8 `/images/fall/*.svg` return 200 with sha256 matching the reviewed sources; `/order/` bundle carries the production Square app id with no sandbox id/env (12 chunks scanned). Safe `POST /api/checkout {}` probe returns **409 `{"error":"closed"}`** rather than 501 — correct, because the run happened Saturday after 16:00 (shop hours Sat 6am–4pm), so the hours gate short-circuits before the missing-sourceId check; nothing was created. No real orders or charges were submitted.
