@@ -4,7 +4,7 @@ Requested 2026-09-06: replace the full summer seasonal menu with six fall drinks
 
 ## Images completed — compact native vector direction
 
-User clarified: keep small artwork like the former summer illustrations, refined with Astra6. This supersedes the proposed photography and provider question. Codex/Astra drew eight transparent128×128 SVGs directly in public/images/fall/. Every drawing has been visually inspected at128px and64px. Design contract is in design-direction.md; artwork-manifest.json records files and subjects. Website visual QA passed; release is next; the previous 4:3WebP proposal is retired.
+User clarified: keep small artwork like the former summer illustrations, refined with Astra6. This supersedes the proposed photography and provider question. Codex/Astra drew eight transparent128×128 SVGs directly in public/images/fall/. Every drawing has been visually inspected at128px and64px. Design contract is in design-direction.md; artwork-manifest.json records files and subjects. Website visual QA passed; both sites are live; the previous 4:3WebP proposal is retired.
 
 ## Implementation completed locally
 
