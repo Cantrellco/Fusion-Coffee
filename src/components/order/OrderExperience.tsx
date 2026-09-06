@@ -6,6 +6,7 @@ import {
   formatCents,
   lineKey,
   unitPriceCents,
+  reconcileCart,
   type CartLine,
   type CartModifier,
   type OrderItem,
@@ -14,8 +15,7 @@ import {
 import { shopOpenStatus, site, type OpenStatus } from '@/lib/site';
 import { ArrowUpRight, Close } from '@/components/icons';
 import { onFieldEnter } from '@/components/formKeys';
-import { CitrusSlice } from '@/components/Citrus';
-import { specimenFor } from '@/components/SummerSpecimens';
+import { Sprig } from '@/components/Botanical';
 import SquareCard from './SquareCard';
 import SavedCardBlock from './SavedCardBlock';
 import ReceiptSummary from '@/components/checkout/ReceiptSummary';
@@ -70,6 +70,12 @@ import { useDragDismiss, useSheetChrome, useCloseAboveBreakpoint } from './sheet
 
 // v2: modifier upcharges landed, so a v1 cart in localStorage holds prices that
 // are now wrong. Bumping the key retires those carts instead of reviving them.
+//
+// The key is deliberately NOT bumped for the summer→fall menu swap: a valid
+// REGULAR cart must survive it. Instead the hydrate effect reconciles every
+// stored line against the current menu (reconcileCart) — retired summer ids are
+// dropped, surviving lines are re-priced from canonical data, and a bumped key
+// would have thrown away good regular carts along with the summer ones.
 const CART_KEY = 'fusion-cart-v2';
 // Per-TAB, not per-browser: written the instant an express wallet is tapped,
 // because Cash App Pay on a phone leaves the site for the Cash App and comes
@@ -363,7 +369,13 @@ export default function OrderExperience() {
       if (raw) {
         const parsed = JSON.parse(raw) as unknown;
         if (Array.isArray(parsed)) {
-          lines = parsed.filter(validLine);
+          // Two gates: validLine drops structurally broken entries (a poison
+          // value would throw during render), then reconcileCart drops any line
+          // whose item/modifier no longer exists — retiring stale summer lines —
+          // and re-prices the survivors from the current menu. A valid regular
+          // cart passes through unchanged; the persist effect writes the
+          // reconciled cart back, so it self-heals in storage.
+          lines = reconcileCart(parsed.filter(validLine));
           dispatch({ type: 'hydrate', lines });
         }
       }
@@ -1135,18 +1147,18 @@ export default function OrderExperience() {
                 className="scroll-mt-[calc(4.5rem+env(safe-area-inset-top))] lg:scroll-mt-0"
               >
                 {/* flex-wrap so the seasonal chip drops to its own line on a
-                    phone instead of squeezing "Summer Drinks" into two lines. */}
+                    phone instead of squeezing "Fall Drinks" into two lines. */}
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-b border-ink/15 pb-3">
                   <h2 className="font-display text-2xl text-ink md:text-3xl">
                     {cat.heading}
                   </h2>
-                  {/* Seasonal sections wear the same citrus "Limited time" chip
-                      the /menu Summer header does, so the two pages read as one
-                      menu; everything else keeps the plain note (e.g. 6–11am). */}
+                  {/* Seasonal sections wear the same "Limited time" chip the
+                      /menu Fall header does, so the two pages read as one menu;
+                      everything else keeps the plain note (e.g. 6–11am). */}
                   {cat.note &&
                     (cat.seasonal ? (
                       <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-oak/45 bg-cream-deep px-3 py-1">
-                        <CitrusSlice className="h-3.5 w-3.5 shrink-0 text-terracotta" />
+                        <Sprig className="h-3.5 w-3.5 shrink-0 text-sage" />
                         <span className="text-xs uppercase tracking-mega text-brick-deep">
                           {cat.note}
                         </span>
@@ -2080,7 +2092,6 @@ function MenuRowMobile({
 }) {
   const [justAdded, setJustAdded] = useState(false);
   const timer = useRef<number>();
-  const specimen = specimenFor(item.name);
   const customizable = (item.modifiers?.length ?? 0) > 0;
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -2112,10 +2123,19 @@ function MenuRowMobile({
         justAdded ? 'animate-row-flash motion-reduce:animate-none' : ''
       }`}
     >
-      {specimen && (
-        <span aria-hidden className="mt-0.5 h-10 w-10 shrink-0 opacity-90">
-          {specimen}
-        </span>
+      {item.image && (
+        // Decorative line-art emblem — the name is the accessible label.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={item.image}
+          alt=""
+          aria-hidden="true"
+          width={128}
+          height={128}
+          loading="lazy"
+          decoding="async"
+          className="-my-1 h-12 w-12 shrink-0 object-contain"
+        />
       )}
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-3">
@@ -2174,10 +2194,6 @@ function MenuRowDesktop({
   );
   const [justAdded, setJustAdded] = useState(false);
   const timer = useRef<number>();
-  // The item's hand-drawn specimen sketch, matched by exact name — the same
-  // drawings the /menu summer cards carry. null for everything unillustrated,
-  // which is every regular-menu item today.
-  const specimen = specimenFor(item.name);
   // What THIS build costs right now — the row price tracks the dropdowns, so an
   // oat-milk upcharge is visible before the item is ever added to the cart.
   const upcharge = (item.modifiers ?? []).reduce((sum, g) => {
@@ -2213,17 +2229,22 @@ function MenuRowDesktop({
   return (
     <div className="hidden flex-wrap items-start justify-between gap-x-4 gap-y-3 py-4 lg:flex">
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        {/* On /menu these sketches sit behind the card as faint watermarks; in
-            a dense order list they earn their keep as a small legible mark that
-            identifies the drink at a glance. Decorative — the name is the
-            accessible label, so the wrapper stays aria-hidden. */}
-        {specimen && (
-          <span
-            aria-hidden
-            className="mt-0.5 h-10 w-10 shrink-0 opacity-90 sm:h-11 sm:w-11"
-          >
-            {specimen}
-          </span>
+        {/* The seasonal line-art emblem, matched to the item. Only the fall
+            items carry one; every regular-menu row stays image-free exactly as
+            it was. Decorative here — the name is the accessible label — so the
+            alt is empty. */}
+        {item.image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.image}
+            alt=""
+            aria-hidden="true"
+            width={128}
+            height={128}
+            loading="lazy"
+            decoding="async"
+            className="-my-1 h-12 w-12 shrink-0 object-contain sm:h-14 sm:w-14"
+          />
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-3">

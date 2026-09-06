@@ -17,8 +17,8 @@ import { useEffect, useRef, useState } from 'react';
 
 // Long headings that would blow out the rail. Anything not listed rides as-is.
 const SHORT: Record<string, string> = {
-  'Summer Drinks': 'Summer',
-  'Summer Food': 'Summer Eats',
+  'Fall Drinks': 'Fall',
+  'Fall Toast': 'Toast',
   'Breakfast Sandwiches': 'Breakfast',
 };
 

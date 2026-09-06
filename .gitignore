@@ -47,6 +47,8 @@ Thumbs.db
 *.tsbuildinfo
 .turbo/
 coverage/
+# Ad-hoc test compile output (tsconfig.test.json → tests/*.test.cjs)
+.tmp-test/
 
 # Unrelated tooling that happens to live in this folder (not part of the site)
 superpowers/
@@ -59,3 +61,8 @@ docs/*
 !docs/party-booking-handoff.md
 !docs/party-calendar-additions.md
 !docs/party-calendar-littletown.gs
+# …and the fall 2026 seasonal design direction + image prompts — the provenance
+# of the shipped FallMenu imagery. Negating the directory needs the trailing
+# `/**` because git won't descend into an excluded dir to find file negations.
+!docs/fall-2026/
+!docs/fall-2026/**

@@ -1,0 +1,16 @@
+{
+  "// Purpose": "Standalone compile of the pure data/logic modules so tests/*.test.cjs can exercise them on plain Node (the site has no test-runner dependency). Emits CommonJS into .tmp-test, which is gitignored. Not part of the site build.",
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2020",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "resolveJsonModule": true,
+    "rootDir": "src",
+    "outDir": ".tmp-test",
+    "noEmit": false
+  },
+  "include": ["src/lib/order.ts", "src/lib/site.ts", "src/lib/hours.ts"]
+}

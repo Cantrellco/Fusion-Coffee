@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Pumpkin Spice",
+    "file": "public/images/fall/pumpkin-spice.svg",
+    "subject": "Pumpkin with curling stem and sage leaf",
+    "width": 128,
+    "height": 128,
+    "bytes": 833,
+    "format": "native SVG",
+    "authorship": "Codex / Astra",
+    "visual_inspection": "128px and64px artboard passed"
+  },
+  {
+    "name": "Peanut Butter",
+    "file": "public/images/fall/peanut-butter.svg",
+    "subject": "Peanut shell and shelled peanut",
+    "width": 128,
+    "height": 128,
+    "bytes": 938,
+    "format": "native SVG",
+    "authorship": "Codex / Astra",
+    "visual_inspection": "128px and64px artboard passed"
+  },
+  {
+    "name": "S’more",
+    "file": "public/images/fall/smore.svg",
+    "subject": "Graham crackers and toasted marshmallow",
+    "width": 128,
+    "height": 128,
+    "bytes": 1022,
+    "format": "native SVG",
+    "authorship": "Codex / Astra",
+    "visual_inspection": "128px and64px artboard passed"
+  },
+  {
+    "name": "Brown Bear Cold Brew",
+    "file": "public/images/fall/brown-bear-cold-brew.svg",
+    "subject": "Maple leaf, oat sprig, cinnamon sticks",
+    "width": 128,
+    "height": 128,
+    "bytes": 1019,
+    "format": "native SVG",
+    "authorship": "Codex / Astra",
+    "visual_inspection": "128px and64px artboard passed"
+  },
+  {
+    "name": "Apple Chaider",
+    "file": "public/images/fall/apple-chaider.svg",
+    "subject": "Apple and cinnamon sticks",
+    "width": 128,
+    "height": 128,
+    "bytes": 894,
+    "format": "native SVG",
+    "authorship": "Codex / Astra",
+    "visual_inspection": "128px and64px artboard passed"
+  },
+  {
+    "name": "Honey Butter",
+    "file": "public/images/fall/honey-butter.svg",
+    "subject": "Honey dipper, butter pat, black salt",
+    "width": 128,
+    "height": 128,
+    "bytes": 1071,
+    "format": "native SVG",
+    "authorship": "Codex / Astra",
+    "visual_inspection": "128px and64px artboard passed"
+  },
+  {
+    "name": "Mediterranean Toast",
+    "file": "public/images/fall/mediterranean-toast.svg",
+    "subject": "Avocado, arugula, cherry tomato, feta and balsamic toast",
+    "width": 128,
+    "height": 128,
+    "bytes": 1404,
+    "format": "native SVG",
+    "authorship": "Codex / Astra",
+    "visual_inspection": "128px and64px artboard passed"
+  },
+  {
+    "name": "Caramel Apple Toast",
+    "file": "public/images/fall/caramel-apple-toast.svg",
+    "subject": "Green-edged apple fan, caramel and crumble toast",
+    "width": 128,
+    "height": 128,
+    "bytes": 1237,
+    "format": "native SVG",
+    "authorship": "Codex / Astra",
+    "visual_inspection": "128px and64px artboard passed"
+  }
+]

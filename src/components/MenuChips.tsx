@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 // Section order matters: the scroll-spy resolves "active" as the LAST section
 // in this list the reader has reached, so it must mirror document order.
 const SECTIONS = [
-  { id: 'summer', label: 'Summer' },
+  { id: 'fall', label: 'Fall' },
   { id: 'drinks', label: 'Drinks' },
   { id: 'breakfast', label: 'Breakfast' },
   { id: 'eats', label: 'Eats' },
@@ -51,8 +51,8 @@ export default function MenuChips() {
         for (const e of entries) {
           // A section counts as "reached" while it intersects the band, OR
           // once its top has scrolled past the band's top edge (the anchor
-          // for #summer is a zero-height div, so the top-edge check is what
-          // keeps Summer marked long after the point-sized anchor leaves).
+          // for #fall is a zero-height div, so the top-edge check is what
+          // keeps Fall marked long after the point-sized anchor leaves).
           passed.set(e.target.id, e.isIntersecting || e.boundingClientRect.top < 72);
         }
         let current: string = SECTIONS[0].id;

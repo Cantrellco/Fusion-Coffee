@@ -182,89 +182,157 @@ export const partyBooking: {
 };
 
 // ============================================================
-// Summer Menu — seasonal, limited-time. Featured on the home
-// page directly under the hero and at the top of /menu.
-// Source photo: /Fusion Images/menu-summer.jpeg.
+// Fall Menu — seasonal, limited-time. Featured on the home
+// page directly under the hero and at the top of /menu, as a set
+// of compact framed specimen cards (see FallMenu.tsx). Each card
+// carries a tiny line-art ingredient emblem drawn in the shop's
+// pen. Images live in /images/fall (Codex/Astra-owned art): one
+// transparent 128×128 SVG per item, decorative only — the name
+// and recipe beside it carry the meaning, so every emblem renders
+// with alt="" aria-hidden.
 //
 // PRICES: the shop's seasonal board carries no printed prices, so
 // /menu and the home page deliberately show names + descriptions
 // only — unchanged. The `price` below exists purely so /order can
 // put these in a cart, and it is the ONE place to correct them.
 //
-// CONFIRMED BY THE SHOP 2026-08-03 — these are the real seasonal
-// prices, no longer derived from regular-menu analogs. They run
-// $1.00 over the comparable regular drink ($6.50 vs the $5.50 latte,
-// $5.00 vs the $4.00 lemonade), which is why the earlier guesses read
-// low. Square catalog sync will eventually own these.
+// Prices are INFERRED from the summer set the shop confirmed
+// 2026-08-03: seasonal espresso builds ran $6.50 ($1.00 over the
+// $5.50 latte), so Pumpkin Spice / Peanut Butter / S'more / Honey
+// Butter / Brown Bear Cold Brew are $6.50; the Apple Chaider is
+// $6.00 (chai is $5.00 on the board, +$1 seasonal); the two toasts
+// price off the $9.00 Avocado Toast — Mediterranean Toast is a
+// loaded savory toast at $10.00, the Caramel Apple Toast a simpler
+// sweet one at $9.00. Square catalog sync will eventually own these.
+//
+// `id` is EXPLICIT and prefixed `fall-` on purpose: it is the cart /
+// order key, and a `fall-` prefix guarantees no collision with the
+// old (name-slugged, unprefixed) summer ids — so a stale summer cart
+// in localStorage can never masquerade as a fall item. It falls
+// through the server's price_changed path and is dropped instead.
+//
+// `build` tells /order which modifiers an item takes; food carries
+// none. Grab-and-go items are pre-made from the fridge and take no
+// options at all (oat milk is already in the base price).
 // ============================================================
-export type SummerItem = { name: string; blurb: string; price: string };
-export type SummerGroup = { heading: string; items: SummerItem[] };
+export type FallBuild = 'latte' | 'chaider' | 'grab-and-go';
+export type FallItem = {
+  id: string;
+  name: string;
+  blurb: string;
+  price: string;
+  image: string;
+  /**
+   * A short description of the line-art emblem. The emblems are decorative and
+   * render with alt="" aria-hidden everywhere, so this is not surfaced to
+   * assistive tech today — it is kept as human-readable provenance for the
+   * drawing, NOT a description of any photograph.
+   */
+  alt: string;
+  build?: FallBuild;
+  /** Shown as a small "from the grab-and-go fridge" note on the card. */
+  grabAndGo?: boolean;
+};
+export type FallGroup = { heading: string; items: FallItem[] };
 
-export const summerMenu: {
+/** Intrinsic size of every /images/fall emblem (square transparent SVG). */
+export const FALL_IMAGE_WIDTH = 128;
+export const FALL_IMAGE_HEIGHT = 128;
+
+export const fallMenu: {
   eyebrow: string;
   title: string;
   intro: string;
-  groups: SummerGroup[];
+  groups: FallGroup[];
 } = {
   eyebrow: 'Limited time',
-  title: 'The Summer Menu is on.',
+  title: 'The Fall Menu is here.',
   intro:
-    'Seasonal lattes, fresh-squeezed lemonades and a couple of sweet bites — here while the sun is.',
+    'Housemade seasonal syrups, spiced ciders and warm sourdough toasts — poured and plated while the mornings are cool.',
   groups: [
     {
       heading: 'Drinks',
       items: [
         {
-          name: 'Blueberry Latte',
+          id: 'fall-pumpkin-spice',
+          name: 'Pumpkin Spice',
           price: '$6.50',
-          blurb:
-            'House-made blueberry syrup + milk of choice, topped with espresso or matcha.',
+          blurb: 'Housemade pumpkin sauce + espresso + milk.',
+          image: '/images/fall/pumpkin-spice.svg',
+          alt: 'Line-art emblem of a little pumpkin and an espresso cup.',
+          build: 'latte',
         },
         {
-          name: 'Banana Pudding Latte',
+          id: 'fall-peanut-butter',
+          name: 'Peanut Butter',
           price: '$6.50',
-          blurb:
-            'House-made banana syrup + milk of choice + espresso, finished with banana cold foam and wafer crumble.',
+          blurb: 'Housemade peanut butter syrup + espresso + milk.',
+          image: '/images/fall/peanut-butter.svg',
+          alt: 'Line-art emblem of roasted peanuts and a coffee cup.',
+          build: 'latte',
         },
         {
-          name: 'Root Beer Float Flash Brew',
+          id: 'fall-smore',
+          name: 'S’more',
           price: '$6.50',
           blurb:
-            'House-made root beer reduction + flash brew, topped with a vanilla cream float.',
+            'Housemade toasted marshmallow syrup + graham cracker infused milk + espresso, dusted with cocoa powder.',
+          image: '/images/fall/smore.svg',
+          alt: 'Line-art emblem of a toasted marshmallow and a graham cracker.',
+          build: 'latte',
         },
         {
-          name: 'Cereal Milk Latte',
+          id: 'fall-brown-bear-cold-brew',
+          name: 'Brown Bear Cold Brew',
+          price: '$6.50',
+          blurb:
+            'Salted brown butter syrup + maple + cinnamon + cold brew + oat milk. Grab-and-go from the fridge.',
+          image: '/images/fall/brown-bear-cold-brew.svg',
+          alt: 'Line-art emblem of a capped cold-brew bottle with cinnamon and oats.',
+          build: 'grab-and-go',
+          grabAndGo: true,
+        },
+        {
+          id: 'fall-apple-chaider',
+          name: 'Apple Chaider',
           price: '$6.00',
-          blurb: 'Fruity Pebbles–infused oat milk + espresso.',
+          blurb: 'Local apple cider + spiced chai.',
+          image: '/images/fall/apple-chaider.svg',
+          alt: 'Line-art emblem of an apple and a warm spiced mug.',
+          build: 'chaider',
         },
         {
-          name: 'Piña Colada Lemonade',
-          price: '$5.00',
+          id: 'fall-honey-butter',
+          name: 'Honey Butter',
+          price: '$6.50',
           blurb:
-            'Fresh-squeezed lemonade mixed with a house-made coconut pineapple syrup.',
-        },
-        {
-          name: 'Dragon Fruit Lemonade',
-          price: '$5.00',
-          blurb:
-            'Fresh-squeezed lemonade mixed with a house-made dragon fruit coconut syrup.',
+            'Housemade honey butter syrup + espresso + milk, finished with a black lava sea salt garnish.',
+          image: '/images/fall/honey-butter.svg',
+          alt: 'Line-art emblem of a honey dipper and a coffee cup.',
+          build: 'latte',
         },
       ],
     },
     {
-      heading: 'Food',
+      heading: 'Toast',
       items: [
         {
-          name: 'Peach Cobbler Yogurt Bowl',
-          price: '$7.50',
+          id: 'fall-mediterranean-toast',
+          name: 'Mediterranean Toast',
+          price: '$10.00',
           blurb:
-            'Honey Greek yogurt + house-made brown sugar cinnamon peaches + house-made streusel topping.',
+            'Sourdough + mashed avocado + arugula + cherry tomato + feta + balsamic glaze.',
+          image: '/images/fall/mediterranean-toast.svg',
+          alt: 'Line-art emblem of a slice of topped sourdough toast.',
         },
         {
-          name: 'Summer Affogato',
-          price: '$6.75',
+          id: 'fall-caramel-apple-toast',
+          name: 'Caramel Apple Toast',
+          price: '$9.00',
           blurb:
-            'Vanilla ice cream topped with “Feels Like Summer” blend espresso, roasted by Methodical Coffee.',
+            'Sourdough + cookie butter + Granny Smith apples + caramel drizzle + Biscoff crumble.',
+          image: '/images/fall/caramel-apple-toast.svg',
+          alt: 'Line-art emblem of sourdough toast with apple slices and a caramel drizzle.',
         },
       ],
     },
@@ -790,13 +858,13 @@ function menuJsonLd() {
       { '@type': 'MenuSection', name: 'Sandwiches', hasMenuItem: priced(regularMenu.sandwiches) },
       {
         '@type': 'MenuSection',
-        name: summerMenu.title,
-        description: summerMenu.intro,
-        // Deliberately NO `offers` here even though summerMenu now carries a
-        // `price` for /order: structured data must match what the page shows,
-        // and /menu displays the seasonal items without prices. Add offers here
-        // only if/when the printed seasonal board starts listing prices too.
-        hasMenuItem: summerMenu.groups.flatMap((g) =>
+        name: fallMenu.title,
+        description: fallMenu.intro,
+        // Deliberately NO `offers` here even though fallMenu carries a `price`
+        // for /order: structured data must match what the page shows, and /menu
+        // displays the seasonal items without prices. Add offers here only
+        // if/when the printed seasonal board starts listing prices too.
+        hasMenuItem: fallMenu.groups.flatMap((g) =>
           g.items.map((it) => ({ '@type': 'MenuItem', name: it.name, description: it.blurb })),
         ),
       },

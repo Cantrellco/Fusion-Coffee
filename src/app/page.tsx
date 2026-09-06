@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Button from '@/components/Button';
 import Reveal from '@/components/Reveal';
 import CoffeeOrbit from '@/components/CoffeeOrbit';
-import SummerMenu from '@/components/SummerMenu';
+import FallMenu from '@/components/FallMenu';
 import Marquee from '@/components/Marquee';
 import OpenStatus from '@/components/OpenStatus';
 import { ArrowRight, Clock, MapPin } from '@/components/icons';
@@ -99,10 +99,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ============================ SUMMER MENU ============================ */}
+      {/* ============================ FALL MENU ============================ */}
       {/* The seasonal menu, promoted to the lead section under the hero, with
           one clear route to the full menu below it. Shared with /menu. */}
-      <SummerMenu withCta />
+      <FallMenu withCta />
 
       {/* ===================== COFFEE ORBIT (scroll-scrub) ===================== */}
       {/* The one immersive "delight" beat — the can up close. */}

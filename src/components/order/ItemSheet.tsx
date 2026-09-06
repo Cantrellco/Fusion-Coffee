@@ -8,7 +8,6 @@ import {
   type OrderModifierOption,
 } from '@/lib/order';
 import { Close } from '@/components/icons';
-import { specimenFor } from '@/components/SummerSpecimens';
 import { useDragDismiss, useSheetChrome, useCloseAboveBreakpoint } from './sheet';
 
 // ============================================================
@@ -113,7 +112,6 @@ export default function ItemSheet({
   const { style: dragStyle, handlers } = useDragDismiss({ onDismiss: onClose });
 
   const unit = item ? buildPrice(item, selection) : 0;
-  const specimen = item ? specimenFor(item.name) : null;
 
   function submit() {
     if (!item) return;
@@ -170,10 +168,19 @@ export default function ItemSheet({
         <div {...handlers} className="flex-none touch-none px-5 pb-3 pt-3">
           <div aria-hidden className="mx-auto mb-3 h-1.5 w-11 rounded-full bg-ink/15" />
           <div className="flex items-start gap-3">
-            {specimen && (
-              <span aria-hidden className="mt-0.5 h-10 w-10 shrink-0">
-                {specimen}
-              </span>
+            {item?.image && (
+              // Decorative line-art emblem beside the heading — no photo hero.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.image}
+                alt=""
+                aria-hidden="true"
+                width={128}
+                height={128}
+                loading="lazy"
+                decoding="async"
+                className="-mt-1 h-24 w-24 shrink-0 object-contain"
+              />
             )}
             <div className="min-w-0 flex-1">
               {/* No price here on purpose: the footer CTA carries the live

@@ -10,7 +10,7 @@
 // price_changed panel. Losing this data loses keystrokes, not money.
 // ============================================================
 
-import type { CartLine } from '@/lib/order';
+import { lineIsCurrent, type CartLine } from '@/lib/order';
 
 const NAME_KEY = 'fusion-name-v1';
 const TIP_KEY = 'fusion-tip-v1';
@@ -95,6 +95,12 @@ export function rememberedLastOrder(
     if (!Array.isArray(o.lines) || o.lines.length === 0) return null;
     if (!o.lines.every(validLine)) return null;
     if (!Number.isInteger(o.totalCents) || o.totalCents <= 0) return null;
+    // Suppress the WHOLE snapshot if any line is no longer exactly current (a
+    // retired summer item, or one whose price moved): its stored total would
+    // misrepresent what a reorder now costs. An all-regular, unchanged usual
+    // survives; a mixed summer/regular one is dropped entirely — never partly
+    // reordered, never silently remapped.
+    if (!o.lines.every(lineIsCurrent)) return null;
     return o;
   } catch {
     return null;

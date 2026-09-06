@@ -3,21 +3,21 @@ import PageHero from '@/components/PageHero';
 import MenuChips from '@/components/MenuChips';
 import Reveal from '@/components/Reveal';
 import Button from '@/components/Button';
-import SummerMenu from '@/components/SummerMenu';
+import FallMenu from '@/components/FallMenu';
 import { CornerBotanical, Sprig } from '@/components/Botanical';
 import { site, regularMenu, ogBase } from '@/lib/site';
 
 export const metadata: Metadata = {
   title: 'Menu',
   description:
-    "The full Fusion Coffee menu — specialty espresso, non-coffee, tea, breakfast sandwiches, açaí bowls and eats, plus this season's Summer Menu. Fairfield, IL.",
+    "The full Fusion Coffee menu — specialty espresso, non-coffee, tea, breakfast sandwiches, açaí bowls and eats, plus this season's Fall Menu. Fairfield, IL.",
   alternates: { canonical: '/menu/' },
   openGraph: {
     ...ogBase,
     url: '/menu/',
     title: 'Menu · Fusion Coffee',
     description:
-      "The full Fusion Coffee menu — specialty espresso, non-coffee, tea, breakfast sandwiches, açaí bowls and eats, plus this season's Summer Menu.",
+      "The full Fusion Coffee menu — specialty espresso, non-coffee, tea, breakfast sandwiches, açaí bowls and eats, plus this season's Fall Menu.",
   },
 };
 
@@ -52,7 +52,7 @@ export default function MenuPage() {
       <PageHero
         eyebrow="Menu"
         title="Everything we make."
-        intro="Specialty espresso, non-coffee, tea, breakfast sandwiches and eats — plus this season's Summer Menu. Order online to skip the line."
+        intro="Specialty espresso, non-coffee, tea, breakfast sandwiches and eats — plus this season's Fall Menu. Order online to skip the line."
       />
 
       {/* Mobile-only sticky category chips — the app-style jump nav for this
@@ -60,18 +60,18 @@ export default function MenuPage() {
           strip sticks for the entire menu below it. md:hidden inside. */}
       <MenuChips />
 
-      {/* ===================== SUMMER MENU (seasonal — top of the menu) ===================== */}
+      {/* ===================== FALL MENU (seasonal — top of the menu) ===================== */}
       {/* Shared with the home page; here without the "See the full menu" CTA. */}
-      {/* Jump anchor for the chips — SummerMenu is shared with the home page,
+      {/* Jump anchor for the chips — FallMenu is shared with the home page,
           so the id lives on this zero-height div instead of inside it. The
           mobile scroll-mt clears the 4.5rem hide-on-scroll top bar (+ notch)
           in its worst case (visible after an upward scroll); md:scroll-mt-0
           keeps the id inert on desktop. */}
       <div
-        id="summer"
+        id="fall"
         className="scroll-mt-[calc(4.5rem+env(safe-area-inset-top))] md:scroll-mt-0"
       />
-      <SummerMenu />
+      <FallMenu />
 
       {/* ===================== DRINKS — Coffee + Flavors, Non-Coffee, Tea ===================== */}
       <section

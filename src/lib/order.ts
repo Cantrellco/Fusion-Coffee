@@ -1,12 +1,12 @@
 // ============================================================
 // Orderable menu — the data the on-site Order page (/order) runs on.
 //
-// It is DERIVED from `summerMenu` + `regularMenu` (the same two menus shown on
+// It is DERIVED from `fallMenu` + `regularMenu` (the same two menus shown on
 // /menu), in the same order /menu presents them — seasonal first, then drinks,
 // breakfast, eats, sandwiches — so the order page can never drift from the menu
 // page: one source of truth. Prices are the listed prices, converted to integer
-// CENTS for exact math. (Seasonal prices are derived, not printed — see the
-// SummerItem block in site.ts.)
+// CENTS for exact math. (Seasonal prices are inferred, not printed — see the
+// FallItem block in site.ts.)
 //
 // ⚠️ WIRE-UP: when the live Square catalog is connected, THIS FILE is what gets
 // replaced — the build step will map Square's CatalogItem / CatalogItemVariation
@@ -15,7 +15,7 @@
 // day (the Orders API needs it to build a real order); it is null until then.
 // ============================================================
 
-import { regularMenu, summerMenu } from './site';
+import { regularMenu, fallMenu, type FallBuild } from './site';
 
 /**
  * One choice inside a modifier group. `priceCents` is an upcharge ADDED to the
@@ -55,6 +55,9 @@ export type OrderItem = {
   priceCents: number;
   description?: string;
   modifiers?: OrderModifierGroup[];
+  /** Seasonal recipe illustration (fall items only); absent on the regular menu. */
+  image?: string;
+  imageAlt?: string;
   /** Square Catalog object id — filled in at catalog wire-up, null until then. */
   squareCatalogObjectId?: string | null;
 };
@@ -160,27 +163,50 @@ function drinkModifiers(name: string, blurb = ''): OrderModifierGroup[] {
   return groups;
 }
 
+// Fall seasonal items declare their build EXPLICITLY (site.ts), so /order does
+// not have to guess milk/shot from the copy — which would wrongly offer milk on
+// the pre-made grab-and-go bottle and on the Chaider. `undefined` build = food,
+// no options.
+//   latte       — espresso build: temperature, milk, flavor, extra shot.
+//   chaider     — cider + chai: temperature and flavor only (no milk, no shot).
+//   grab-and-go — pre-made bottle from the fridge: no options at all; oat milk
+//                 is already in the base price, so there is no oat upcharge.
+function fallModifiers(build?: FallBuild): OrderModifierGroup[] {
+  switch (build) {
+    case 'latte':
+      return [TEMP, MILK, FLAVOR, EXTRA_SHOT];
+    case 'chaider':
+      return [TEMP, FLAVOR];
+    default:
+      return [];
+  }
+}
+
 export const orderMenu: OrderCategory[] = [
-  // Seasonal first — /menu leads with the Summer Menu, so /order does too.
-  // Its two groups (Drinks, Food) stay separate exactly as they read on /menu;
-  // the drinks take the same milk + flavor options as the regular bar, the
-  // food takes none. Blurbs carry over as the item description, and each item
-  // keeps its hand-drawn specimen sketch (matched by name in SummerSpecimens).
-  ...summerMenu.groups.map((group) => ({
-    id: `summer-${slug(group.heading)}`,
-    heading: `Summer ${group.heading}`,
-    note: summerMenu.eyebrow,
+  // Seasonal first — /menu leads with the Fall Menu, so /order does too. Its
+  // two groups (Drinks, Toast) stay separate exactly as they read on /menu; the
+  // drinks take the milk/flavor/shot options their `build` allows, the toasts
+  // take none. Blurbs carry over as the item description, the id is the EXPLICIT
+  // `fall-` id from site.ts (never a name slug — see the FallItem header), and
+  // the recipe illustration rides along for the order row / item sheet.
+  ...fallMenu.groups.map((group) => ({
+    id: `fall-${slug(group.heading)}`,
+    heading: `Fall ${group.heading}`,
+    note: fallMenu.eyebrow,
     seasonal: true,
-    items: group.items.map((it) => ({
-      id: slug(it.name),
-      name: it.name,
-      priceCents: toCents(it.price),
-      description: it.blurb,
-      ...(/drink/i.test(group.heading)
-        ? { modifiers: drinkModifiers(it.name, it.blurb) }
-        : {}),
-      squareCatalogObjectId: null,
-    })),
+    items: group.items.map((it) => {
+      const modifiers = fallModifiers(it.build);
+      return {
+        id: it.id,
+        name: it.name,
+        priceCents: toCents(it.price),
+        description: it.blurb,
+        image: it.image,
+        imageAlt: it.alt,
+        ...(modifiers.length ? { modifiers } : {}),
+        squareCatalogObjectId: null,
+      };
+    }),
   })),
 
   // Drinks: same rules as the seasonal bar — temperature on everything, milk
@@ -273,4 +299,85 @@ export function lineKey(itemId: string, modifiers: CartModifier[]): string {
     .sort()
     .join('|');
   return mods ? `${itemId}__${mods}` : itemId;
+}
+
+// ---- Reconciling a stored cart against the CURRENT menu -------------------
+//
+// A cart (or a remembered "usual") in localStorage can outlive the menu it was
+// built on — most sharply across the summer→fall swap, where a stored
+// `blueberry-latte` line points at an item we no longer make. These helpers are
+// the browser-side mirror of the server's repriceCafeLine: they look every
+// stored line up in the LIVE `orderMenu`, drop anything whose item id or a
+// modifier no longer resolves (so a retired summer line is discarded, never
+// silently remapped onto a fall item or charged), and re-price everything that
+// survives from canonical data. Regular carts pass through unchanged because
+// their ids and prices are unchanged.
+
+const itemsById: Map<string, OrderItem> = new Map(
+  orderMenu.flatMap((cat) => cat.items.map((it) => [it.id, it] as const)),
+);
+
+/**
+ * Re-price and validate ONE stored line against the current menu. Returns a
+ * canonical `CartLine` (current name, price, key and modifier upcharges) or
+ * null when the item is gone or a modifier no longer resolves. Quantity is
+ * carried through verbatim.
+ */
+export function reconcileCartLine(raw: CartLine): CartLine | null {
+  const item = itemsById.get(raw.itemId);
+  if (!item) return null;
+
+  const modifiers: CartModifier[] = [];
+  for (const m of raw.modifiers ?? []) {
+    const group = item.modifiers?.find((g) => g.id === m.groupId);
+    if (!group) return null;
+    const option = group.options.find((o) => o.value === m.value);
+    if (!option) return null;
+    // "No milk" / "No flavor" and friends never ride in a cart line; skip them
+    // defensively so a hand-edited payload can't smuggle one back in.
+    if (option.noop) continue;
+    modifiers.push({
+      groupId: group.id,
+      label: group.label,
+      value: option.value,
+      priceCents: option.priceCents ?? 0,
+    });
+  }
+
+  return {
+    key: lineKey(item.id, modifiers),
+    itemId: item.id,
+    name: item.name,
+    priceCents: unitPriceCents(item.priceCents, modifiers),
+    qty: raw.qty,
+    modifiers,
+    squareCatalogObjectId: item.squareCatalogObjectId ?? null,
+  };
+}
+
+/**
+ * Reconcile a whole stored cart: drop retired/invalid lines, re-price the rest,
+ * and merge any lines that now share a key (same key ⇒ same canonical price).
+ */
+export function reconcileCart(raw: CartLine[]): CartLine[] {
+  const byKey = new Map<string, CartLine>();
+  for (const r of raw) {
+    const line = reconcileCartLine(r);
+    if (!line) continue;
+    const existing = byKey.get(line.key);
+    if (existing) existing.qty += line.qty;
+    else byKey.set(line.key, { ...line });
+  }
+  return Array.from(byKey.values());
+}
+
+/**
+ * Is this stored line still EXACTLY current — same item, resolvable modifiers,
+ * and the same unit price it was saved at? Used to gate the "Your usual"
+ * reorder: a snapshot with any retired or repriced line is suppressed whole, so
+ * the pill never advertises an order whose stored total no longer holds.
+ */
+export function lineIsCurrent(raw: CartLine): boolean {
+  const line = reconcileCartLine(raw);
+  return line !== null && line.priceCents === raw.priceCents;
 }
